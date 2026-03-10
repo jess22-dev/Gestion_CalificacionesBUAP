@@ -15,10 +15,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 RUN composer install --no-dev --optimize-autoloader
 
-RUN php artisan migrate --force
-
 RUN chmod -R 775 storage bootstrap/cache
 RUN chown -R www-data:www-data storage bootstrap/cache
+
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan view:cache
+
+RUN php artisan migrate --force
 
 RUN a2enmod rewrite
 

@@ -12,9 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('grupos', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+        $table->id();
+        $table->string('nombre'); // Ejemplo: Bases de Datos
+        $table->string('nrc');    // El código de la materia en la BUAP
+        $table->foreignId('profesor_id')->constrained()->onDelete('cascade'); // El profesor asignado
+        $table->timestamps();
+    });
     }
 
     /**

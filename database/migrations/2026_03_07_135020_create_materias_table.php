@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('materias', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->string('nombre'); // Agregamos el campo nombre
+            $table->string('codigo')->unique(); // Agregamos el código y que sea único (como un ID escolar)
+            $table->timestamps(); // Esto ya crea created_at y updated_at
         });
     }
 

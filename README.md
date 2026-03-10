@@ -1,59 +1,247 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema Académico
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Proyecto desarrollado con **Laravel** para la gestión básica de materias, grupos y estudiantes dentro de una institución académica.
 
-## About Laravel
+El sistema permite administrar información académica y registrar la relación entre estudiantes y grupos.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+# Descripción del Proyecto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Este sistema académico permite realizar operaciones básicas de gestión educativa:
 
-## Learning Laravel
+* Registro de materias
+* Creación de grupos académicos
+* Registro de estudiantes
+* Inscripción de estudiantes en grupos
+* Autenticación de usuarios
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+El sistema está desarrollado utilizando **arquitectura MVC** proporcionada por Laravel.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+# Tecnologías Utilizadas
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+El proyecto utiliza las siguientes herramientas:
 
-### Premium Partners
+* **Laravel** – Framework principal del backend
+* **PHP** – Lenguaje de programación
+* **MySQL** – Base de datos
+* **Laravel Breeze** – Sistema de autenticación
+* **Node.js** – Compilación de recursos frontend
+* **Git** – Control de versiones
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+# Requisitos del Sistema
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Para ejecutar el proyecto es necesario tener instalado:
 
-## Code of Conduct
+* **PHP** 8.1 o superior
+* **Composer**
+* **Node.js**
+* **MySQL**
+* **Git**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Opcionalmente se recomienda usar:
 
-## Security Vulnerabilities
+* **Laragon** o **XAMPP** para facilitar el entorno de desarrollo.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+# Instalación del Proyecto
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 1. Clonar el repositorio
+
+```bash
+git clone URL_DEL_REPOSITORIO
+```
+
+Entrar al directorio del proyecto:
+
+```bash
+cd sistema-academico
+```
+
+---
+
+# Instalar dependencias del backend
+
+Instalar las dependencias de **Laravel** con:
+
+```bash
+composer install
+```
+
+---
+
+# Instalar dependencias del frontend
+
+Instalar paquetes de **Node.js**:
+
+```bash
+npm install
+```
+
+Compilar recursos:
+
+```bash
+npm run dev
+```
+
+---
+
+# Configurar variables de entorno
+
+Crear el archivo `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Luego generar la clave del sistema:
+
+```bash
+php artisan key:generate
+```
+
+---
+
+# Configurar base de datos
+
+En el archivo `.env` configurar la conexión a **MySQL**:
+
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sistema_academico
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Crear la base de datos manualmente en MySQL con el nombre:
+
+```
+sistema_academico
+```
+
+---
+
+# Ejecutar migraciones
+
+Crear las tablas del sistema:
+
+```bash
+php artisan migrate
+```
+
+---
+
+# Ejecutar el servidor
+
+Iniciar el servidor de desarrollo:
+
+```bash
+php artisan serve
+```
+
+Abrir en el navegador:
+
+```
+http://127.0.0.1:8000
+```
+
+---
+
+# Funcionalidades del Sistema
+
+El sistema permite realizar las siguientes operaciones:
+
+### Gestión de Materias
+
+* Crear materias
+* Editar materias
+* Listar materias
+
+### Gestión de Grupos
+
+* Crear grupos
+* Asociar grupos a materias
+* Listar grupos
+
+### Gestión de Estudiantes
+
+* Registrar estudiantes
+* Editar estudiantes
+* Listar estudiantes
+
+### Inscripción a Grupos
+
+* Asociar estudiantes a grupos
+* Visualizar estudiantes inscritos
+
+---
+
+# Estructura General del Proyecto
+
+El proyecto sigue la estructura estándar de **Laravel**:
+
+```
+app/
+   Models/
+   Http/
+      Controllers/
+
+database/
+   migrations/
+
+resources/
+   views/
+
+routes/
+   web.php
+```
+
+---
+
+# Flujo de Trabajo con Git
+
+Cada integrante debe trabajar en su propia rama.
+
+Crear una rama:
+
+```bash
+git checkout -b nombre-rama
+```
+
+Guardar cambios:
+
+```bash
+git add .
+git commit -m "Descripción de cambios"
+git push origin nombre-rama
+```
+
+---
+
+# Equipo de Desarrollo
+
+Proyecto desarrollado por estudiantes de la asignatura:
+
+**Modelos de Desarrollo Web**
+
+Integrantes del equipo:
+
+* Andres Felipe Joya Buitrago
+* Emily Nicoll David Villadiego
+* Jessica Juarez
+* 
+
+---
+
+# Licencia
+
+Proyecto desarrollado con fines académicos.
+
+Con eso tu repositorio se ve **mucho más profesional**.

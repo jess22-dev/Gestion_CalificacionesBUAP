@@ -11,36 +11,46 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * Reglas de validación dinámicas
      */
     public function rules(): array
     {
+        // Si el usuario seleccionó 'alumno' en el select del login
+        if ($this->role === 'alumno') {
+            return [
+                'role'   => ['required', 'string'],
+                'codigo' => ['required', 'string'],
+            ];
+        }
+
+        // Si es profesor o admin, pedimos los datos tradicionales
         return [
-            'email' => ['required', 'string', 'email'],
+            'role'     => ['required', 'string'],
+            'email'    => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Intentar autenticar
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
+        // Si es alumno, NO intentamos Auth::attempt porque no usa password tradicional.
+        // La lógica de búsqueda por código ya la pusimos en el AuthenticatedSessionController.
+        if ($this->role === 'alumno') {
+            return; 
+        }
+
+        // Para Profesores y Admins:
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
@@ -52,11 +62,6 @@ class LoginRequest extends FormRequest
         RateLimiter::clear($this->throttleKey());
     }
 
-    /**
-     * Ensure the login request is not rate limited.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function ensureIsNotRateLimited(): void
     {
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -64,7 +69,6 @@ class LoginRequest extends FormRequest
         }
 
         event(new Lockout($this));
-
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
@@ -76,10 +80,13 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Get the rate limiting throttle key for the request.
+     * Llave para el límite de intentos (Throttling)
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        // Si es alumno usamos su código, si no, su email para bloquear intentos fallidos
+        $identifier = $this->role === 'alumno' ? $this->string('codigo') : $this->string('email');
+        
+        return Str::transliterate(Str::lower($identifier).'|'.$this->ip());
     }
 }

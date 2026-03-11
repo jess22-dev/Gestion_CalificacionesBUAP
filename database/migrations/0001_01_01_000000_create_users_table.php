@@ -17,6 +17,12 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            
+            // --- CAMBIO PARA EL PROYECTO ---
+            // Definimos los roles: admin, profesor, alumno
+            $table->string('role')->default('profesor'); 
+            // -------------------------------
+
             $table->rememberToken();
             $table->timestamps();
         });

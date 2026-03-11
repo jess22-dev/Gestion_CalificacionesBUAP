@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('materias', function (Blueprint $table) {
-            $table->id();
-            $table->string('nombre'); // Agregamos el campo nombre
-            $table->string('codigo')->unique(); // Agregamos el código y que sea único (como un ID escolar)
-            $table->timestamps(); // Esto ya crea created_at y updated_at
+        // El NRC es el identificador único de la clase/grupo
+        $table->id(); 
+        $table->string('nombre_materia'); // Ej: Modelos de Desarrollo Web
+        $table->string('grupo');          // Ej: ITI-101 (Lo que pidió el profe)
+        $table->string('seccion');        // Ej: 001
+        $table->string('dias');           // Ej: Lunes, Miércoles
+        $table->string('horario');        // Ej: 10:00 - 12:00
+        
+        // Relación con el profesor (Usuario)
+        $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+        
+        $table->timestamps();
         });
     }
 

@@ -13,20 +13,18 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
+     * Los atributos que se pueden llenar masivamente.
+     * Añadimos 'role' para que el Seeder y el Registro funcionen.
      */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role', // <-- IMPORTANTE: Añade esto para evitar errores de asignación
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
+     * Atributos ocultos para la serialización.
      */
     protected $hidden = [
         'password',
@@ -34,9 +32,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Casts de atributos.
      */
     protected function casts(): array
     {
@@ -44,5 +40,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // --- RELACIONES PARA EL SISTEMA BUAP ---
+
+    /**
+     * Relación para el PROFESOR:
+     * Un usuario (profesor) tiene muchos grupos asignados.
+     */
+    public function grupos()
+    {
+        // Esto asume que en tu tabla 'grupos' hay una columna 'profesor_id'
+        return $this->hasMany(Grupo::class, 'profesor_id');
+    }
+
+    /**
+     * Relación para el ALUMNO:
+     * Un usuario (alumno) pertenece a muchas materias/grupos.
+     */
+    public function materiasInscritas()
+    {
+    // CAMBIA Grupo::class por Materia::class
+    return $this->belongsToMany(Materia::class, 'alumno_materia', 'alumno_id', 'materia_id')
+                ->withPivot('clave_unica', 'status', 'promedio_real', 'promedio_redondeado')
+                ->withTimestamps();
     }
 }

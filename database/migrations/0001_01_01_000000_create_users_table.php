@@ -20,7 +20,7 @@ return new class extends Migration
             
             // --- CAMBIO PARA EL PROYECTO ---
             // Definimos los roles: admin, profesor, alumno
-            $table->string('role')->default('profesor'); 
+            $table->string('role'); 
             // -------------------------------
 
             $table->rememberToken();

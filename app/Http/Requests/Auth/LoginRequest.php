@@ -21,18 +21,18 @@ class LoginRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Si el usuario seleccionó 'alumno' en el select del login
-        if ($this->role === 'alumno') {
+        // 1. Si es alumno, el email NO es obligatorio ni debe validarse como tal
+        if ($this->input('role') === 'alumno') {
             return [
                 'role'   => ['required', 'string'],
                 'codigo' => ['required', 'string'],
             ];
         }
 
-        // Si es profesor o admin, pedimos los datos tradicionales
+        // 2. Si es profesor o admin, el email SÍ es requerido
         return [
             'role'     => ['required', 'string'],
-            'email'    => ['required', 'string', 'email'],
+            'email'    => ['required', 'string', 'email'], // Aquí sí validamos formato email
             'password' => ['required', 'string'],
         ];
     }
@@ -44,18 +44,17 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // Si es alumno, NO intentamos Auth::attempt porque no usa password tradicional.
-        // La lógica de búsqueda por código ya la pusimos en el AuthenticatedSessionController.
-        if ($this->role === 'alumno') {
+        // 3. Si es alumno, salimos de aquí. La lógica vive en el controlador.
+        if ($this->input('role') === 'alumno') {
             return; 
         }
 
-        // Para Profesores y Admins:
+        // 4. Para Profesores y Admins: Intentamos el login tradicional
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => __('auth.failed'),
             ]);
         }
 
@@ -84,8 +83,10 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        // Si es alumno usamos su código, si no, su email para bloquear intentos fallidos
-        $identifier = $this->role === 'alumno' ? $this->string('codigo') : $this->string('email');
+        // Usamos el identificador según el rol
+        $identifier = ($this->input('role') === 'alumno') 
+            ? $this->input('codigo') 
+            : $this->input('email');
         
         return Str::transliterate(Str::lower($identifier).'|'.$this->ip());
     }

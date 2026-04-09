@@ -11,21 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('materias', function (Blueprint $table) {
-        // El NRC es el identificador único de la clase/grupo
-        $table->id(); 
-        $table->string('nombre_materia'); // Ej: Modelos de Desarrollo Web
-        $table->string('grupo');          // Ej: ITI-101 (Lo que pidió el profe)
-        $table->string('seccion');        // Ej: 001
-        $table->string('dias');           // Ej: Lunes, Miércoles
-        $table->string('horario');        // Ej: 10:00 - 12:00
+    Schema::create('materias', function (Blueprint $table) {
+        $table->string('nrc')->primary(); // Columna A
+        $table->string('clave');         // Columna B (La clave de la materia)
+        $table->string('Materia');         // Columna C 
+        $table->string('Profesor');         //COLUMNA D
+
         
-        // Relación con el profesor (Usuario)
-        $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+        // Relación con el profesor (Columna F / fila[5])
+        $table->foreignId('profesor_id')->constrained('users')->onDelete('cascade');
         
         $table->timestamps();
-        });
+    });
     }
+
 
     /**
      * Reverse the migrations.

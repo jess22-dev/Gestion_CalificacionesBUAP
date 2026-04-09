@@ -9,20 +9,23 @@ class Materia extends Model
 {
     use HasFactory;
 
-    /**
-     * Campos que se pueden llenar masivamente.
-     * Añadimos 'nrc' (Req 2) y 'profesor_id' para la asignación.
-     */
+    // 1. Configuramos el NRC como llave primaria (como en tu migración)
+    protected $primaryKey = 'nrc';
+    public $incrementing = false; // Ya que el NRC no es autoincremental
+    protected $keyType = 'string';
+
+    // 2. Definimos los campos que se pueden llenar (Exactamente como tu migración)
     protected $fillable = [
-        'nombre', 
-        'codigo', 
-        'nrc', 
-        'profesor_id'
+        'nrc',        // Columna A
+        'clave',      // Columna B
+        'Materia',    // Columna C (con Mayúscula)
+        'Profesor',   // Columna D (con Mayúscula)
+        'profesor_id' // El ID del usuario que se crea/busca
     ];
 
     /**
-     * RELACIÓN CON EL PROFESOR (DUEÑO DEL GRUPO)
-     * Una materia pertenece a un profesor (usuario con rol 'profesor').
+     * RELACIÓN CON EL PROFESOR (Modelo User)
+     * Usamos 'profesor_id' porque así lo nombraste en la migración
      */
     public function profesor()
     {
@@ -30,14 +33,17 @@ class Materia extends Model
     }
 
     /**
-     * RELACIÓN CON LOS ALUMNOS (INSCRITOS)
-     * Una materia tiene muchos alumnos inscritos.
+     * RELACIÓN CON LOS ALUMNOS
+     * Por si la necesitas más adelante para inscripciones
      */
     public function alumnos()
     {
-        // Conecta con la tabla intermedia 'alumno_materia'
-        return $this->belongsToMany(User::class, 'alumno_materia', 'materia_id', 'alumno_id')
-                    ->withPivot('clave_unica', 'status')
+        return $this->belongsToMany(User::class, 'alumno_materia', 'materia_nrc', 'alumno_id')
                     ->withTimestamps();
+    }
+    public function profesorRelacion()
+    {
+        // Esto le dice a Laravel: "Busca en la tabla de Usuarios al que tenga el ID que yo tengo en profesor_id"
+        return $this->belongsTo(User::class, 'profesor_id');
     }
 }

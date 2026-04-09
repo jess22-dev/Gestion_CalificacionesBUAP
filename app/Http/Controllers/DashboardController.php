@@ -10,10 +10,8 @@ class DashboardController extends Controller
 {
     public function index()
     {
-    
-        $materias = Materia::where('user_id', Auth::id())->get();
+    $materias = Materia::where('profesor_id', auth()->id())->get();
 
-        // 3. Enviamos 'materias' a la vista
-        return view('profesor.dashboard', compact('materias'));
+    return view('profesor.dashboard', compact('materias')); // <--- Agregamos 'profesor.'
     }
 }

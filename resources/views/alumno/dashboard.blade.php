@@ -1,71 +1,117 @@
 <x-app-layout>
+    {{-- Header idéntico al del Profesor --}}
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">
-            {{ __('Mi Carga Académica - Alumno BUAP') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-bold text-2xl text-white tracking-tight italic">
+                <span class="text-blue-200 font-light ml-2"> Estudiante BUAP</span>
+            </h2>
+            <div class="hidden md:block text-right">
+                <p class="text-blue-200 font-light ml-2">Primavera 2026</p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12 bg-gradient-to-br from-[#f0f4f8] via-white to-[#f0f4f8] min-h-screen">
+    <div class="py-12 bg-[#f0f4f8] min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            {{-- Sección de Bienvenida --}}
-            <div class="mb-8 bg-white p-6 rounded-2xl shadow-sm border-l-8 border-[#002d62]">
-                <h3 class="text-2xl font-bold text-[#1e4b8a]">¡Hola, {{ Auth::user()->name }}!</h3>
-                <p class="text-gray-500">Aquí puedes consultar tus materias inscritas y tus claves únicas de seguimiento.</p>
+            {{-- Encabezado de bienvenida (Mismo estilo que Profesor) --}}
+            <div class="mb-10 ml-4 lg:ml-0">
+                <h3 class="text-3xl font-black text-[#002d62] tracking-tighter uppercase italic">Mi Carga Académica</h3>
+                <p class="text-gray-500 font-medium italic">Consulta tus materias inscritas y tus claves de seguimiento.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {{-- Usamos la relación materiasInscritas que pusimos en el User.php --}}
-                @forelse(Auth::user()->materiasInscritas as $materia)
-                    <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-                        
-                        <div class="bg-[#f8fafc] p-5 border-b border-gray-100 flex justify-between items-center">
-                            <div>
-                                <h4 class="text-lg font-bold text-[#1e4b8a]">{{ $materia->nombre }}</h4>
-                                <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Código: {{ $materia->codigo }}</span>
-                            </div>
-                            <div class="bg-[#1e4b8a] text-white px-3 py-1 rounded-full text-xs font-bold">
-                                NRC: {{ $materia->nrc }}
-                            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {{-- Materia de Ejemplo 1 --}}
+                <div class="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden transform hover:scale-[1.03] transition-all duration-300 group">
+                    
+                    {{-- Cabecera con Degradado (Igual al Profesor) --}}
+                    <div class="bg-gradient-to-br from-[#1e4b8a] to-[#002d62] p-8 h-32 flex items-start justify-between relative overflow-hidden">
+                        <div class="relative z-10">
+                            <p class="text-blue-200 text-[10px] font-black uppercase tracking-widest mb-1">Asignatura</p>
+                            <h4 class="text-xl font-black text-white leading-tight italic uppercase">Programación Web</h4>
                         </div>
-                        
-                        <div class="p-6">
-                            {{-- La Clave Única resaltada --}}
-                            <div class="bg-[#eef2f7] rounded-xl p-4 mb-4 border border-blue-100">
-                                <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Clave Única de Inscripción</p>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xl font-mono font-black text-[#002d62] tracking-wider">
-                                        {{ $materia->pivot->clave_unica ?? 'PENDIENTE' }}
-                                    </span>
-                                    <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-                                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center text-sm text-gray-500">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                {{-- Si tienes la relación con el profesor configurada --}}
-                                Profesor: <span class="ml-1 font-semibold text-gray-700"> {{ $materia->profesor->name ?? 'Por asignar' }}</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 flex justify-between items-center">
-                            <span class="text-xs font-bold text-green-600 uppercase italic">
-                                ● {{ $materia->pivot->status ?? 'Inscrito' }}
-                            </span>
-                            <button class="text-[#1e4b8a] text-xs font-bold hover:underline">Ver detalles</button>
-                        </div>
+                        {{-- Icono flotante de fondo --}}
+                        <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 transform rotate-12" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.394 2.827a1 1 0 00-.788 0l-7 3a1 1 0 000 1.848l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.848l-7-3zM14 9.528c.538.303.812.646.812.972 0 .326-.274.669-.812.972l-3.394 1.912a1 1 0 01-.788 0L6.414 11.472c-.538-.303-.812-.646-.812-.972 0-.326.274-.669.812-.972L10 11.528l4-2z"></path>
+                        </svg>
                     </div>
-                @empty
-                    <div class="col-span-full bg-white p-12 rounded-2xl border-2 border-dashed border-gray-200 text-center">
-                        <p class="text-gray-500 text-lg">No se encontraron materias en tu carga actual.</p>
-                        <p class="text-gray-400 text-sm mt-2">Asegúrate de haber completado tu proceso de reinscripción.</p>
+                    
+                    <div class="p-8 space-y-6">
+                        {{-- Badge de Datos (Mismo estilo que Profesor) --}}
+                        <div class="bg-blue-50 rounded-2xl p-4 flex justify-between items-center border border-blue-100">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">NRC</span>
+                                <span class="text-lg font-black text-[#002d62]">12345</span>
+                            </div>
+                            <div class="h-8 w-px bg-blue-200"></div>
+                            <div class="flex flex-col text-right">
+                                <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Sección</span>
+                                <span class="text-lg font-black text-[#002d62] italic">001</span>
+                            </div>
+                        </div>
+                        
+                        {{-- Clave Única resaltada --}}
+                        <div class="space-y-1">
+                            <p class="text-[#1e4b8a] text-xs font-bold flex items-center italic">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                CLAVE ÚNICA: <span class="ml-1 font-black">WEB-777-XYZ</span>
+                            </p>
+                            <p class="text-gray-400 text-[10px] leading-relaxed">Profesor: <span class="font-bold">DR. JUAN PÉREZ HERNÁNDEZ</span></p>
+                        </div>
+                        
+                        {{-- Botón de Acción (Igual al Profesor) --}}
+                        <a href="#" 
+                           class="flex items-center justify-center w-full py-4 bg-[#002d62] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#1e4b8a] transition-all shadow-lg shadow-blue-900/20 active:scale-95 group">
+                            Detalles de materia
+                            <svg class="w-4 h-4 ml-2 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </a>
                     </div>
-                @endforelse
+                </div>
+
+                {{-- Materia de Ejemplo 2 --}}
+                <div class="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden transform hover:scale-[1.03] transition-all duration-300 group">
+                    <div class="bg-gradient-to-br from-[#1e4b8a] to-[#002d62] p-8 h-32 flex items-start justify-between relative overflow-hidden">
+                        <div class="relative z-10">
+                            <p class="text-blue-200 text-[10px] font-black uppercase tracking-widest mb-1">Asignatura</p>
+                            <h4 class="text-xl font-black text-white leading-tight italic uppercase">Base de Datos</h4>
+                        </div>
+                        <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 transform rotate-12" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.394 2.827a1 1 0 00-.788 0l-7 3a1 1 0 000 1.848l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.848l-7-3zM14 9.528c.538.303.812.646.812.972 0 .326-.274.669-.812.972l-3.394 1.912a1 1 0 01-.788 0L6.414 11.472c-.538-.303-.812-.646-.812-.972 0-.326.274-.669.812-.972L10 11.528l4-2z"></path>
+                        </svg>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <div class="bg-blue-50 rounded-2xl p-4 flex justify-between items-center border border-blue-100">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">NRC</span>
+                                <span class="text-lg font-black text-[#002d62]">67890</span>
+                            </div>
+                            <div class="h-8 w-px bg-blue-200"></div>
+                            <div class="flex flex-col text-right">
+                                <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Sección</span>
+                                <span class="text-lg font-black text-[#002d62] italic">005</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <p class="text-[#1e4b8a] text-xs font-bold flex items-center italic">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                CLAVE ÚNICA: <span class="ml-1 font-black">SQL-999-ABC</span>
+                            </p>
+                            <p class="text-gray-400 text-[10px] leading-relaxed">Profesor: <span class="font-bold">MTRA. MARÍA GARCÍA SOSA</span></p>
+                        </div>
+                        
+                        <a href="#" 
+                           class="flex items-center justify-center w-full py-4 bg-[#002d62] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#1e4b8a] transition-all shadow-lg shadow-blue-900/20 active:scale-95 group">
+                            Detalles de materia
+                            <svg class="w-4 h-4 ml-2 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

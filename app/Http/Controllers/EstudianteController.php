@@ -15,7 +15,7 @@ class EstudianteController extends Controller
     public function index()
     {
         $estudiantes = Estudiante::latest()->paginate(15);
-        return view('estudiantes.index', compact('estudiantes'));
+        return view('profesor.estudiantes.index', compact('estudiantes'));
     }
 
     /**
@@ -23,7 +23,7 @@ class EstudianteController extends Controller
      */
     public function create()
     {
-        return view('estudiantes.create');
+        return view('profesor.estudiantes.create');
     }
 
     /**
@@ -47,7 +47,7 @@ class EstudianteController extends Controller
 
         Estudiante::create($request->only('nombre', 'email', 'codigo_estudiante'));
 
-        return redirect()->route('estudiantes.index')
+        return redirect()->route('profesor.estudiantes.index')
             ->with('success', 'Estudiante agregado correctamente.');
     }
 
@@ -56,7 +56,7 @@ class EstudianteController extends Controller
      */
     public function showImport()
     {
-        return view('estudiantes.import');
+        return view('profesor.estudiantes.import');
     }
 
     /**
@@ -64,7 +64,7 @@ class EstudianteController extends Controller
      */
     public function edit(Estudiante $estudiante)
     {
-        return view('estudiantes.edit', compact('estudiante'));
+        return view('profesor.estudiantes.edit', compact('estudiante'));
     }
 
     /**
@@ -88,7 +88,7 @@ class EstudianteController extends Controller
 
         $estudiante->update($request->only('nombre', 'email', 'codigo_estudiante'));
 
-        return redirect()->route('estudiantes.index')
+        return redirect()->route('profesor.estudiantes.index')
             ->with('success', 'Estudiante actualizado correctamente.');
 }
 
@@ -114,20 +114,20 @@ class EstudianteController extends Controller
 
             // Caso 1: Solo duplicados, nada nuevo
             if ($importados === 0 && count($duplicados) > 0) {
-                return redirect()->route('estudiantes.import')
+                return redirect()->route('profesor.estudiantes.import')
                     ->with('warning', 'No se agregó ningún estudiante. Todos los registros ya existen.')
                     ->with('duplicados', $duplicados);
             }
 
             // Caso 2: Algunos importados y algunos duplicados
             if ($importados > 0 && count($duplicados) > 0) {
-                return redirect()->route('estudiantes.index')
+                return redirect()->route('profesor.estudiantes.index')
                     ->with('warning', "Se importaron {$importados} estudiante(s). " . count($duplicados) . " registro(s) ya existían y fueron omitidos.")
                     ->with('duplicados', $duplicados);
             }
 
             // Caso 3: Todo importado sin duplicados
-            return redirect()->route('estudiantes.index')
+            return redirect()->route('profesor.estudiantes.index')
                 ->with('success', "Se importaron {$importados} estudiante(s) correctamente.");
 
 
@@ -139,13 +139,13 @@ class EstudianteController extends Controller
     foreach ($e->failures() as $failure) {
         $errores[] = "Fila {$failure->row()}: " . implode(', ', $failure->errors());
     }
-    return redirect()->route('estudiantes.import')
+    return redirect()->route('profesor.estudiantes.import')
         ->with('warning', 'Algunos registros no se importaron por datos inválidos o incompletos.')
         ->with('errores', $errores);
 
 
         } catch (\Exception $e) {
-            return redirect()->route('estudiantes.import')
+            return redirect()->route('profesor.estudiantes.import')
                 ->with('error', 'Error al procesar el archivo: ' . $e->getMessage());
         }
     }
@@ -156,6 +156,6 @@ class EstudianteController extends Controller
     public function show(Estudiante $estudiante)
     {
         $estudiante->load('grupos');
-        return view('estudiantes.show', compact('estudiante'));
+        return view('profesor.estudiantes.show', compact('estudiante'));
     }
 }

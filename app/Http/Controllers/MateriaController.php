@@ -58,4 +58,44 @@ class MateriaController extends Controller
         $materia->delete();
         return redirect()->route('materias.index')->with('success', 'Materia eliminada correctamente');
     }
+
+
+
+
+
+
+
+   public function show($nrc)
+{
+    $materia = Materia::where('nrc', $nrc)->firstOrFail();
+
+    $alumnos = \DB::table('alumno_materia')
+        ->where('materia_nrc', $nrc)
+        ->get();
+
+    return view('profesor.grupos-detalle', [
+        'id' => $nrc,
+        'materia' => $materia,
+        'alumnos' => $alumnos
+    ]);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+

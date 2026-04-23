@@ -5,53 +5,173 @@
 
     <div class="py-12 bg-gradient-to-br from-[#e0ebf8] via-white to-[#e0ebf8] min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
+
             <div class="mb-6">
                 <a href="{{ route('dashboard') }}" class="text-[#1e4b8a] font-bold hover:underline flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    Volver al Dashboard
+                    ← Volver al Dashboard
                 </a>
             </div>
 
             <div class="bg-white overflow-hidden shadow-xl rounded-2xl border border-gray-100">
+
+                {{-- HEADER --}}
                 <div class="bg-[#1e4b8a] p-6 text-white">
-                    <h3 class="text-2xl font-bold">Detalles del Grupo: {{ $id }}</h3>
-                    <p class="opacity-80">Aquí podrás gestionar las calificaciones y asistencias.</p>
+                    <h3 class="text-2xl font-bold">
+                        {{ $materia->Materia }} ({{ $materia->nrc }})
+                    </h3>
+                    <p class="opacity-80">Gestión de calificaciones y asistencia</p>
                 </div>
 
                 <div class="p-8">
+
+                    {{-- ========================= --}}
+                    {{-- 🔵 CALIFICACIONES --}}
+                    {{-- ========================= --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="space-y-4">
-                            <h4 class="text-lg font-bold text-[#002d62] border-b-2 border-blue-100 pb-2">Información General</h4>
-                            <div class="bg-blue-50 p-4 rounded-xl">
-                                <p class="text-sm text-gray-600 font-semibold uppercase">Estatus del Periodo</p>
-                                <p class="text-green-600 font-bold">Activo - Primavera 2026</p>
-                            </div>
+
+                        <!-- Definir Actividad -->
+                        <div class="bg-white p-6 rounded-2xl shadow">
+                            <h3 class="font-bold text-lg mb-4">Definir Actividad</h3>
+
+                            <input type="text" placeholder="Nombre actividad"
+                                class="w-full mb-3 rounded border-gray-300">
+
+                            <select class="w-full mb-3 rounded border-gray-300">
+                                <option>Prácticas (20%)</option>
+                                <option>Examen (20%)</option>
+                                <option>Proyecto (40%)</option>
+                            </select>
+
+                            <input type="number" placeholder="Puntos base"
+                                class="w-full mb-3 rounded border-gray-300">
+
+                            <button class="w-full bg-[#002d62] text-white py-2 rounded-xl font-bold">
+                                Crear Actividad
+                            </button>
                         </div>
 
-                        <div class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300">
-                            <h4 class="text-lg font-bold text-[#002d62] mb-4">Cargar Calificaciones (Excel)</h4>
-                            
-                            <form action="#" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <div class="flex flex-col items-center justify-center">
-                                    <label class="w-full flex flex-col items-center px-4 py-6 bg-white text-blue rounded-lg shadow-lg tracking-wide uppercase border border-blue cursor-pointer hover:bg-blue-50 transition-colors">
-                                        <svg class="w-8 h-8 text-blue-500" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path d="M16.88 9.1L13.47 5.69C13.28 5.5 13.03 5.4 12.78 5.4H3.5C2.67 5.4 2 6.07 2 6.9V17.1C2 17.93 2.67 18.6 3.5 18.6H16.5C17.33 18.6 18 17.93 18 17.1V10.72C18 10.47 17.9 10.22 17.71 10.03L16.88 9.1ZM12.12 6.84L15.28 10H12.12V6.84ZM16.5 17.1H3.5V6.9H10.62V11.5H15.28V17.1H16.5Z" />
-                                        </svg>
-                                        <span class="mt-2 text-sm leading-normal font-semibold text-gray-600">Seleccionar archivo .xlsx</span>
-                                        <input type='file' class="hidden" />
-                                    </label>
-                                    <button type="submit" class="mt-4 w-full bg-[#002d62] text-white font-bold py-2 rounded-lg hover:bg-[#1e4b8a] transition-colors shadow-md">
-                                        Subir y Procesar
-                                    </button>
-                                </div>
-                            </form>
+                        <!-- Actividades -->
+                        <div class="bg-white p-6 rounded-2xl shadow">
+                            <h3 class="font-bold text-lg mb-4">Actividades</h3>
+
+                            <ul class="space-y-3">
+                                <li class="bg-gray-100 p-3 rounded">Configuración de Laravel</li>
+                                <li class="bg-gray-100 p-3 rounded">Examen Primer Parcial</li>
+                                <li class="bg-gray-100 p-3 rounded">Proyecto Final</li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    {{-- ========================= --}}
+                    {{-- 🟢 ASISTENCIA --}}
+                    {{-- ========================= --}}
+                    <div class="mt-12 bg-white p-6 rounded-2xl shadow-xl border">
+
+                        <h3 class="text-xl font-bold text-[#002d62] mb-4">
+                            📋 Control de Asistencia
+                        </h3>
+
+                        <div class="grid md:grid-cols-3 gap-6">
+
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 uppercase">Duración</label>
+                                <select class="w-full mt-2 rounded-xl border-gray-200">
+                                    <option>5 minutos</option>
+                                    <option>10 minutos</option>
+                                    <option>15 minutos</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-end gap-2">
+                                <button class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold">
+                                    Iniciar ▶️
+                                </button>
+
+                                <button class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">
+                                    Detener ⛔
+                                </button>
+                            </div>
+
+                            <div class="flex items-end">
+                                <button class="bg-[#002d62] text-white px-4 py-2 rounded-xl font-bold">
+                                    Escanear QR 📷
+                                </button>
+                            </div>
+
                         </div>
                     </div>
+
+                    {{-- ========================= --}}
+                    {{-- 📋 LISTA DE ALUMNOS --}}
+                    {{-- ========================= --}}
+                    <div class="mt-8 bg-white p-6 rounded-2xl shadow-xl">
+
+                        <h3 class="text-lg font-bold text-[#002d62] mb-4">
+                            Lista de Asistencia
+                        </h3>
+
+                        <table class="w-full">
+                            <thead>
+                                <tr class="text-left text-gray-400 text-xs uppercase">
+                                    <th class="p-3">Matrícula</th>
+                                    <th class="p-3">Alumno</th>
+                                    <th class="p-3 text-center">Asistencia</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach($alumnos as $alumno)
+                                <tr class="border-b">
+                                    <td class="p-3">{{ $alumno->clave_unica }}</td>
+                                    <td class="p-3">Alumno {{ $alumno->alumno_id }}</td>
+                                    <td class="p-3 text-center">
+                                        <input type="checkbox" class="w-5 h-5">
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+
+                    </div>
+
                 </div>
             </div>
 
         </div>
+
+
+        {{-- ========================= --}}
+{{-- 📋 ACCESO A ASISTENCIA --}}
+{{-- ========================= --}}
+<div class="mt-10">
+
+    <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex justify-between items-center">
+
+        <div>
+            <h3 class="text-xl font-bold text-[#002d62]">
+                📋 Módulo de Asistencia
+            </h3>
+            <p class="text-gray-500 text-sm">
+                Gestiona la asistencia del grupo mediante código QR
+            </p>
+        </div>
+
+        <a href="{{ route('profesor.asistencia', $materia->nrc) }}"
+           class="bg-[#002d62] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#1e4b8a] transition shadow-lg">
+
+            Tomar Asistencia →
+        </a>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
     </div>
 </x-app-layout>

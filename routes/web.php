@@ -6,6 +6,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExcelController; 
 use Illuminate\Support\Facades\Auth;
 
+use App\Http\Controllers\MateriaController;
+
 // 1. Redirección inicial: Si ya está logueado, mandarlo a su dashboard
 Route::get('/', function () {
     if (Auth::check()) {
@@ -72,4 +74,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Importante: Rutas de autenticación (Login/Logout)
 require __DIR__.'/auth.php';
+
+
+
+
+Route::get('/profesor/materias/{nrc}', [MateriaController::class, 'show'])
+    ->name('materias.show');
+
+
+    Route::get('/profesor/asistencia/{nrc}', function($nrc) {
+    return view('profesor.asistencia', compact('nrc'));
+})->name('profesor.asistencia');
 require __DIR__.'/estudiantes.php';

@@ -60,6 +60,7 @@
                             
                             {{-- Botón de Acción --}}
                             {{-- Nota: Asegúrate que la ruta profesor.materias acepte el ID --}}
+
                             <a href="{{ route('profesor.materias.show', ['nrc' => $materia->nrc]) }}" 
                                 class="flex items-center justify-center w-full py-4 bg-[#002d62] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#1e4b8a] transition-all shadow-lg shadow-blue-900/20 active:scale-95 group">
                                 Entrar al grupo
@@ -67,6 +68,17 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                                  </svg>
                             </a>
+
+                            <a href="{{ route('materias.show', $materia->nrc) }}" 
+   class="flex items-center justify-center w-full py-4 bg-[#002d62] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#1e4b8a] transition-all shadow-lg shadow-blue-900/20 active:scale-95 group">
+    
+    Entrar al grupo
+
+    <svg class="w-4 h-4 ml-2 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+    </svg>
+</a>
+ Stashed changes
                         </div>
                     </div>
                 @empty

@@ -16,7 +16,7 @@ class AdminSeeder extends Seeder
     'name' => 'Administrador BUAP',
     'email' => 'admin@buap.mx',
     'password' => Hash::make('admin123'),
-    'role' => 'admin', // <--- Asegúrate de que esto esté aquí
+    'role' => 'Administrador', // <--- Asegúrate de que esto esté aquí
 ]);
     }
 }

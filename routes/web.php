@@ -54,9 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('profesor.dashboard');
         Route::get('/profesor/materias', [DashboardController::class, 'index'])->name('profesor.materias');
         
-        Route::get('/materias/{nrc}', function($nrc) {
-            return view('profesor.actividades', compact('nrc'));
-        })->name('profesor.materias.show');
+        Route::get('/grupo/{nrc}', [DashboardController::class, 'showGrupo'])->name('profesor.materias.show');
     });
 
     // 5. SECCIÓN ALUMNO

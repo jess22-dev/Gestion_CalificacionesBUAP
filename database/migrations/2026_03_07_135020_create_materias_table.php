@@ -19,7 +19,7 @@ return new class extends Migration
 
         
         // Relación con el profesor (Columna F / fila[5])
-        $table->foreignId('profesor_id')->constrained('users')->onDelete('cascade');
+        $table->foreignId('profesor_id')->nullable()->constrained('users')->onDelete('cascade');
         
         $table->timestamps();
     });

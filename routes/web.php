@@ -72,3 +72,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Importante: Rutas de autenticación (Login/Logout)
 require __DIR__.'/auth.php';
+require __DIR__.'/estudiantes.php';

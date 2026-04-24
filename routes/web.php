@@ -6,6 +6,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExcelController; 
 use Illuminate\Support\Facades\Auth;
 
+use App\Http\Controllers\MateriaController;
+
 // 1. Redirección inicial: Si ya está logueado, mandarlo a su dashboard
 Route::get('/', function () {
     if (Auth::check()) {
@@ -54,9 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('profesor.dashboard');
         Route::get('/profesor/materias', [DashboardController::class, 'index'])->name('profesor.materias');
         
-        Route::get('/materias/{nrc}', function($nrc) {
-            return view('profesor.actividades', compact('nrc'));
-        })->name('profesor.materias.show');
+        Route::get('/grupo/{nrc}', [DashboardController::class, 'showGrupo'])->name('profesor.materias.show');
     });
 
     // 5. SECCIÓN ALUMNO

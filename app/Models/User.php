@@ -14,13 +14,12 @@ class User extends Authenticatable
 
     /**
      * Los atributos que se pueden llenar masivamente.
-     * Añadimos 'role' para que el Seeder y el Registro funcionen.
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role', // <-- IMPORTANTE: Añade esto para evitar errores de asignación
+        'role', 
     ];
 
     /**
@@ -46,23 +45,31 @@ class User extends Authenticatable
 
     /**
      * Relación para el PROFESOR:
-     * Un usuario (profesor) tiene muchos grupos asignados.
+     * Un usuario (profesor) tiene muchas materias asignadas.
      */
     public function grupos()
     {
-        // Esto asume que en tu tabla 'grupos' hay una columna 'profesor_id'
-        return $this->hasMany(Grupo::class, 'profesor_id');
+        // Se asume que en la tabla 'materias' hay una columna 'profesor_id'
+        return $this->hasMany(Materia::class, 'profesor_id');
     }
 
     /**
      * Relación para el ALUMNO:
-     * Un usuario (alumno) pertenece a muchas materias/grupos.
+     * Un usuario (alumno) pertenece a muchas materias a través de la tabla pivote.
+     * Cambiamos el nombre a 'materias' para que coincida con el AlumnoController.
      */
-    public function materiasInscritas()
+    public function materias()
     {
-    // CAMBIA Grupo::class por Materia::class
-    return $this->belongsToMany(Materia::class, 'alumno_materia', 'alumno_id', 'materia_id')
-                ->withPivot('clave_unica', 'status', 'promedio_real', 'promedio_redondeado')
-                ->withTimestamps();
+        return $this->belongsToMany(Materia::class, 'alumno_materia', 'alumno_id', 'materia_nrc')
+                    ->withPivot([
+                        'clave_unica',
+                        'clave_asistencia',
+                        'promedio_real', 
+                        'promedio_redondeado', 
+                        'status', 
+                        'qr_path', 
+                        'fecha_baja'
+                    ])
+                    ->withTimestamps();
     }
 }

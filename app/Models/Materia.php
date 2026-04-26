@@ -10,41 +10,50 @@ class Materia extends Model
     use HasFactory;
 
     protected $primaryKey = 'nrc';
-    public $incrementing = false; 
+    public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'nrc',
-        'clave',
-        'Materia',
-        'Profesor',
-        'profesor_id'
+        'nrc', 'clave', 'Materia', 'Profesor', 'profesor_id'
     ];
 
-    // Relación con el Profesor
     public function profesorRelacion()
     {
         return $this->belongsTo(User::class, 'profesor_id');
     }
 
-    // Relación con Alumnos (Muchos a Muchos)
+    // Alumnos del sistema antiguo (users con rol alumno)
     public function alumnos()
     {
         return $this->belongsToMany(User::class, 'alumno_materia', 'materia_nrc', 'alumno_id')
                     ->withTimestamps();
     }
 
-    /**
-     * NUEVAS RELACIONES PARA HOY
-     */
+    // Estudiantes del nuevo módulo de alta
+    public function estudiantes()
+    {
+        return $this->belongsToMany(
+            Estudiante::class,
+            'materia_estudiante',
+            'materia_nrc',
+            'estudiante_id',
+            'nrc',
+            'id'
+        )->withPivot('profesor_id', 'status')
+         ->withTimestamps();
+    }
 
-    // Relación con las Actividades (Una materia tiene muchas actividades)
+    // Estudiantes activos de esta materia
+    public function estudiantesActivos()
+    {
+        return $this->estudiantes()->wherePivot('status', 'activo');
+    }
+
     public function actividades()
     {
         return $this->hasMany(Actividad::class, 'materia_nrc', 'nrc');
     }
 
-    // Relación con las Asistencias (Una materia tiene muchos registros de asistencia)
     public function asistencias()
     {
         return $this->hasMany(Asistencia::class, 'materia_nrc', 'nrc');

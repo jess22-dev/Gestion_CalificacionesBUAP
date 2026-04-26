@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExcelController; 
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ActividadController;
 
 use App\Http\Controllers\MateriaController;
 
@@ -50,13 +51,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/importar-excel', [ExcelController::class, 'importar'])->name('excel.importar');
     });
 
-    // 4. SECCIÓN PROFESOR (Corregido: llaves cerradas correctamente)
+    // 4. SECCIÓN PROFESOR
     Route::middleware(['can:profesor'])->prefix('profesor')->group(function () {
-        // Llama al DashboardController que arreglamos (carga la vista profesor.dashboard)
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('profesor.dashboard');
         Route::get('/profesor/materias', [DashboardController::class, 'index'])->name('profesor.materias');
-        
         Route::get('/grupo/{nrc}', [DashboardController::class, 'showGrupo'])->name('profesor.materias.show');
+        Route::get('/materias/{nrc}', [MateriaController::class, 'show'])->name('materias.show');
+
+        // Rutas de Actividades
+        Route::post('/grupo/{nrc}/actividades', [ActividadController::class, 'store'])->name('profesor.actividades.store');
+        Route::delete('/grupo/{nrc}/actividades/{actividad}', [ActividadController::class, 'destroy'])->name('profesor.actividades.destroy');
     });
 
     // 5. SECCIÓN ALUMNO

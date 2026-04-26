@@ -3,6 +3,8 @@
 namespace App\Imports;
 
 use App\Models\Estudiante;
+use App\Models\Materia;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -15,37 +17,73 @@ class EstudiantesImport implements ToModel, WithHeadingRow, WithValidation, Skip
 {
     use SkipsErrors;
 
+    private string $materiaNrc;
     private array $duplicados = [];
+    private array $yaEnOtraMateria = [];
     private int $importados = 0;
+
+    public function __construct(string $materiaNrc)
+    {
+        $this->materiaNrc = $materiaNrc;
+    }
 
     public function model(array $row)
     {
-        // Ignorar filas vacías
         if (empty($row['nombre']) && empty($row['email']) && empty($row['codigo_estudiante'])) {
             return null;
         }
 
-        // Verificar duplicados
-        $existe = Estudiante::where('email', $row['email'])
-                            ->orWhere('codigo_estudiante', (string) $row['codigo_estudiante'])
-                            ->first();
+        // Buscar si el estudiante ya existe en la tabla estudiantes
+        $estudiante = Estudiante::where('email', $row['email'])
+                                ->orWhere('codigo_estudiante', (string) $row['codigo_estudiante'])
+                                ->first();
 
-        if ($existe) {
-            $this->duplicados[] = [
-                'nombre' => $row['nombre'],
-                'email'  => $row['email'],
-                'codigo' => (string) $row['codigo_estudiante'],
-            ];
-            return null;
+        if ($estudiante) {
+            // Ya existe — verificar si ya está en ESTA materia
+            if ($estudiante->estaEnMateria($this->materiaNrc)) {
+                $this->duplicados[] = [
+                    'nombre' => $estudiante->nombre,
+                    'email'  => $estudiante->email,
+                    'codigo' => $estudiante->codigo_estudiante,
+                ];
+                return null;
+            }
+
+            // Está en otra materia — vincularlo a esta
+            if ($estudiante->estaEnOtraMateria($this->materiaNrc)) {
+                $this->yaEnOtraMateria[] = [
+                    'nombre' => $estudiante->nombre,
+                    'email'  => $estudiante->email,
+                    'codigo' => $estudiante->codigo_estudiante,
+                ];
+            }
+
+            // Vincular a esta materia
+            $estudiante->materias()->attach($this->materiaNrc, [
+                'profesor_id' => Auth::id(),
+                'status'      => 'activo',
+            ]);
+
+            $this->importados++;
+            return null; // No crear nuevo registro en estudiantes
         }
 
-        $this->importados++;
-
-        return new Estudiante([
+        // Nuevo estudiante — crear y vincular
+        $nuevoEstudiante = new Estudiante([
             'nombre'            => $row['nombre'],
             'email'             => $row['email'],
             'codigo_estudiante' => (string) $row['codigo_estudiante'],
         ]);
+
+        $nuevoEstudiante->save();
+
+        $nuevoEstudiante->materias()->attach($this->materiaNrc, [
+            'profesor_id' => Auth::id(),
+            'status'      => 'activo',
+        ]);
+
+        $this->importados++;
+        return null;
     }
 
     public function rules(): array
@@ -57,8 +95,9 @@ class EstudiantesImport implements ToModel, WithHeadingRow, WithValidation, Skip
         ];
     }
 
-    public function getDuplicados(): array { return $this->duplicados; }
-    public function getImportados(): int   { return $this->importados; }
+    public function getDuplicados(): array      { return $this->duplicados; }
+    public function getYaEnOtraMateria(): array { return $this->yaEnOtraMateria; }
+    public function getImportados(): int        { return $this->importados; }
 
     public function batchSize(): int { return 100; }
     public function chunkSize(): int { return 200; }

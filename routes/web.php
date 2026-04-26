@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\MateriaController;
 
+
+use App\Http\Controllers\AsistenciaController;
+
 // 1. Redirección inicial: Si ya está logueado, mandarlo a su dashboard
 Route::get('/', function () {
     if (Auth::check()) {
@@ -86,3 +89,15 @@ Route::get('/profesor/materias/{nrc}', [MateriaController::class, 'show'])
     return view('profesor.asistencia', compact('nrc'));
 })->name('profesor.asistencia');
 require __DIR__.'/estudiantes.php';
+
+
+
+
+
+Route::post('/asistencia/iniciar', [AsistenciaController::class, 'iniciar']);
+
+Route::post('/asistencia/detener', [AsistenciaController::class, 'detener']);
+
+Route::post('/asistencia/qr', [AsistenciaController::class, 'registrarQR']);
+
+Route::post('/asistencia/registrar', [AsistenciaController::class, 'registrar']);

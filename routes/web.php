@@ -142,14 +142,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->exists();
 
                 if (!$yaVinculado) {
-                    // Generar clave_unica única para alumno_materia
-                    $claveMateria = \App\Models\Estudiante::generarClaveUnica();
+                    // Generar clave_unica única verificando contra alumno_materia
+                    do {
+                        $claveMateria = strtoupper(\Illuminate\Support\Str::random(10));
+                    } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                        ->where('clave_unica', $claveMateria)->exists());
+
+                    // Generar clave_asistencia única verificando contra alumno_materia
+                    do {
+                        $claveAsistencia = strtoupper(\Illuminate\Support\Str::random(10));
+                    } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                        ->where('clave_asistencia', $claveAsistencia)->exists());
 
                     \Illuminate\Support\Facades\DB::table('alumno_materia')->insert([
                         'alumno_id'        => $user->id,
                         'materia_nrc'      => $materia->nrc,
                         'clave_unica'      => $claveMateria,
-                        'clave_asistencia' => $clave,
+                        'clave_asistencia' => $claveAsistencia,
                         'status'           => 'activo',
                         'created_at'       => now(),
                         'updated_at'       => now(),

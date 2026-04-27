@@ -63,6 +63,22 @@
                             <svg class="w-6 h-6 text-gray-300 group-hover:text-[#1e4b8a] transform group-hover:translate-x-2 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </a>
 
+                        {{-- BOTÓN VER ESTUDIANTES --}}
+                        <a href="{{ route('admin.estudiantes') }}" class="group p-6 border-2 border-green-50 rounded-2xl hover:border-green-400 hover:bg-green-50 transition-all flex items-center justify-between shadow-sm">
+                            <div class="flex items-center space-x-4">
+                                <div class="bg-green-600 p-3 rounded-xl text-white group-hover:scale-110 transition-transform">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="block font-bold text-green-700 text-lg uppercase italic">Estudiantes</span>
+                                    <span class="text-sm text-gray-500 font-medium">Ver todos los alumnos y sus claves únicas</span>
+                                </div>
+                            </div>
+                            <svg class="w-6 h-6 text-gray-300 group-hover:text-green-500 transform group-hover:translate-x-2 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+
                         {{-- BOTÓN PERFIL --}}
                         <a href="{{ route('profile.edit') }}" class="group p-6 border-2 border-gray-50 rounded-2xl hover:border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-between shadow-sm">
                             <div class="flex items-center space-x-4">

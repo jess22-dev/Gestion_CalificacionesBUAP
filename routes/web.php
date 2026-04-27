@@ -9,6 +9,9 @@ use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\ActividadController;
 use App\Http\Controllers\AsistenciaController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +61,104 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('admin.importar');
 
         Route::post('/importar-excel', [ExcelController::class, 'importar'])->name('excel.importar');
+
+        // Ver todos los estudiantes con clave única
+        Route::get('/estudiantes', function () {
+            $buscar      = request('buscar');
+            $estudiantes = \App\Models\Estudiante::with('materias')
+                ->when($buscar, function ($q) use ($buscar) {
+                    $q->where('nombre', 'like', "%{$buscar}%")
+                      ->orWhere('codigo_estudiante', 'like', "%{$buscar}%")
+                      ->orWhere('email', 'like', "%{$buscar}%");
+                })
+                ->orderBy('nombre')
+                ->paginate(20);
+            $conClave  = \App\Models\Estudiante::whereNotNull('clave_unica')->count();
+            $sinClave  = \App\Models\Estudiante::whereNull('clave_unica')->count();
+            return view('admin.estudiantes', compact('estudiantes', 'conClave', 'sinClave'));
+        })->name('admin.estudiantes');
+
+        // Baja de una materia específica
+        Route::delete('/estudiantes/{estudiante}/baja-materia', function (\App\Models\Estudiante $estudiante) {
+            $nrc = request('nrc');
+            if (!$nrc) {
+                return back()->with('error', 'Debes seleccionar una materia.');
+            }
+            $estudiante->materias()->detach($nrc);
+
+            // También actualizar alumno_materia si existe
+            $user = \App\Models\User::where('email', $estudiante->email)->first();
+            if ($user) {
+                $user->materias()->updateExistingPivot($nrc, [
+                    'status'     => 'baja',
+                    'fecha_baja' => now(),
+                ]);
+            }
+
+            return back()->with('success', "Se dio de baja a {$estudiante->nombre} de la materia {$nrc}.");
+        })->name('admin.baja.materia');
+
+        // Baja total de la plataforma
+        Route::delete('/estudiantes/{estudiante}/baja-total', function (\App\Models\Estudiante $estudiante) {
+            $nombre = $estudiante->nombre;
+
+            // Eliminar user asociado
+            $user = \App\Models\User::where('email', $estudiante->email)->where('role', 'alumno')->first();
+            if ($user) {
+                $user->delete();
+            }
+
+            // Eliminar estudiante (cascade eliminará materia_estudiante)
+            $estudiante->delete();
+
+            return back()->with('success', "El estudiante {$nombre} fue eliminado completamente de la plataforma.");
+        })->name('admin.baja.total');
+
+        // Generar clave única para estudiante sin clave
+        Route::post('/estudiantes/{estudiante}/generar-clave', function (\App\Models\Estudiante $estudiante) {
+            if ($estudiante->clave_unica) {
+                return back()->with('error', "El estudiante {$estudiante->nombre} ya tiene una clave asignada.");
+            }
+
+            // Generar clave única
+            $clave = \App\Models\Estudiante::generarClaveUnica();
+            $estudiante->update(['clave_unica' => $clave]);
+
+            // Crear user con rol alumno si no existe — necesario para el login
+            $user = \App\Models\User::firstOrCreate(
+                ['email' => $estudiante->email],
+                [
+                    'name'     => $estudiante->nombre,
+                    'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+                    'role'     => 'alumno',
+                ]
+            );
+
+            // Vincular en alumno_materia para cada materia del estudiante
+            foreach ($estudiante->materias as $materia) {
+                $yaVinculado = \Illuminate\Support\Facades\DB::table('alumno_materia')
+                    ->where('alumno_id', $user->id)
+                    ->where('materia_nrc', $materia->nrc)
+                    ->exists();
+
+                if (!$yaVinculado) {
+                    // Generar clave_unica única para alumno_materia
+                    $claveMateria = \App\Models\Estudiante::generarClaveUnica();
+
+                    \Illuminate\Support\Facades\DB::table('alumno_materia')->insert([
+                        'alumno_id'        => $user->id,
+                        'materia_nrc'      => $materia->nrc,
+                        'clave_unica'      => $claveMateria,
+                        'clave_asistencia' => $clave,
+                        'status'           => 'activo',
+                        'created_at'       => now(),
+                        'updated_at'       => now(),
+                    ]);
+                }
+            }
+
+            return back()->with('success', "Clave generada para {$estudiante->nombre}: {$clave}");
+        })->name('admin.generar.clave');
     });
 
     // 4. SECCIÓN PROFESOR

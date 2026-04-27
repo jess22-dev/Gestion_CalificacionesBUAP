@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
 use App\Models\Materia;
+use App\Models\User;
 use App\Imports\EstudiantesImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class EstudianteController extends Controller
@@ -16,7 +19,7 @@ class EstudianteController extends Controller
      */
     public function index(Request $request)
     {
-        $nrc = $request->query('nrc');
+        $nrc     = $request->query('nrc');
         $materia = null;
 
         if ($nrc) {
@@ -24,9 +27,7 @@ class EstudianteController extends Controller
                               ->where('profesor_id', Auth::id())
                               ->firstOrFail();
 
-            // Solo estudiantes de esta materia dados de alta por este profesor
             $estudiantes = $materia->estudiantes()
-                                   ->wherePivot('profesor_id', Auth::id())
                                    ->wherePivot('status', 'activo')
                                    ->paginate(15);
         } else {
@@ -41,7 +42,7 @@ class EstudianteController extends Controller
      */
     public function create(Request $request)
     {
-        $nrc = $request->query('nrc');
+        $nrc     = $request->query('nrc');
         $materia = null;
 
         if ($nrc) {
@@ -54,7 +55,9 @@ class EstudianteController extends Controller
     }
 
     /**
-     * Guardar estudiante manual y vincularlo a la materia
+     * Guardar estudiante manual
+     * - Si es nuevo: crea en estudiantes + crea user alumno + vincula en alumno_materia
+     * - Si existe: verifica si ya está en esta materia o en otra
      */
     public function store(Request $request)
     {
@@ -83,13 +86,11 @@ class EstudianteController extends Controller
                                ->first();
 
         if ($existente) {
-            // Ya está en ESTA materia
             if ($existente->estaEnMateria($nrc)) {
                 return back()->withInput()
                     ->with('error', "El estudiante {$existente->nombre} ya está registrado en esta materia.");
             }
 
-            // Está en otra materia — preguntar si quiere agregarlo
             if ($existente->estaEnOtraMateria($nrc)) {
                 return back()->withInput()
                     ->with('info', "El estudiante {$existente->nombre} (código: {$existente->codigo_estudiante}) ya está registrado en otra materia. ¿Deseas agregarlo también a esta materia?")
@@ -97,26 +98,71 @@ class EstudianteController extends Controller
                     ->with('nrc', $nrc);
             }
 
-            // Vincularlo a esta materia
+            // Vincular a materia_estudiante
             $existente->materias()->attach($nrc, [
                 'profesor_id' => Auth::id(),
                 'status'      => 'activo',
             ]);
 
+            // También vincular en alumno_materia si tiene user
+            $userAlumno = User::where('email', $existente->email)->first();
+            if ($userAlumno) {
+                $this->vincularAlumnoMateria($userAlumno, $nrc, $existente->codigo_estudiante);
+            }
+
             return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
                 ->with('success', "Estudiante {$existente->nombre} agregado a la materia correctamente.");
         }
 
-        // Nuevo estudiante
-        $estudiante = Estudiante::create($request->only('nombre', 'email', 'codigo_estudiante'));
+        // Nuevo estudiante — generar clave única
+        $claveUnica = Estudiante::generarClaveUnica();
 
+        $estudiante = Estudiante::create([
+            'nombre'            => $request->nombre,
+            'email'             => $request->email,
+            'codigo_estudiante' => $request->codigo_estudiante,
+            'clave_unica'       => $claveUnica,
+        ]);
+
+        // Crear usuario con rol alumno si no existe
+        $userAlumno = User::firstOrCreate(
+            ['email' => $request->email],
+            [
+                'name'     => $request->nombre,
+                'password' => Hash::make(Str::random(16)), // password random, no se usa
+                'role'     => 'alumno',
+            ]
+        );
+
+        // Vincular en materia_estudiante
         $estudiante->materias()->attach($nrc, [
             'profesor_id' => Auth::id(),
             'status'      => 'activo',
         ]);
 
+        // Vincular en alumno_materia (sistema existente)
+        $this->vincularAlumnoMateria($userAlumno, $nrc, $request->codigo_estudiante, $claveUnica);
+
         return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
-            ->with('success', 'Estudiante agregado correctamente.');
+            ->with('success', "Estudiante {$estudiante->nombre} registrado correctamente.")
+            ->with('clave_generada', $claveUnica)
+            ->with('nombre_alumno', $estudiante->nombre);
+    }
+
+    /**
+     * Vincular alumno en alumno_materia (sistema existente del proyecto)
+     */
+    private function vincularAlumnoMateria(User $user, string $nrc, string $codigoEstudiante, string $claveAsistencia = null): void
+    {
+        $yaVinculado = $user->materias()->where('materia_nrc', $nrc)->exists();
+
+        if (!$yaVinculado) {
+            $user->materias()->attach($nrc, [
+                'clave_unica'      => $codigoEstudiante,
+                'clave_asistencia' => $claveAsistencia ?? Estudiante::generarClaveUnica(),
+                'status'           => 'activo',
+            ]);
+        }
     }
 
     /**
@@ -124,13 +170,10 @@ class EstudianteController extends Controller
      */
     public function agregarExistente(Request $request)
     {
-        $nrc            = $request->input('nrc');
-        $estudianteId   = $request->input('estudiante_id');
+        $nrc          = $request->input('nrc');
+        $estudianteId = $request->input('estudiante_id');
 
-        $materia = Materia::where('nrc', $nrc)
-                          ->where('profesor_id', Auth::id())
-                          ->firstOrFail();
-
+        $materia    = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
         $estudiante = Estudiante::findOrFail($estudianteId);
 
         if (!$estudiante->estaEnMateria($nrc)) {
@@ -138,6 +181,11 @@ class EstudianteController extends Controller
                 'profesor_id' => Auth::id(),
                 'status'      => 'activo',
             ]);
+
+            $userAlumno = User::where('email', $estudiante->email)->first();
+            if ($userAlumno) {
+                $this->vincularAlumnoMateria($userAlumno, $nrc, $estudiante->codigo_estudiante);
+            }
         }
 
         return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
@@ -149,13 +197,11 @@ class EstudianteController extends Controller
      */
     public function showImport(Request $request)
     {
-        $nrc = $request->query('nrc');
+        $nrc     = $request->query('nrc');
         $materia = null;
 
         if ($nrc) {
-            $materia = Materia::where('nrc', $nrc)
-                              ->where('profesor_id', Auth::id())
-                              ->firstOrFail();
+            $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
         }
 
         return view('profesor.estudiantes.import', compact('materia', 'nrc'));
@@ -171,15 +217,9 @@ class EstudianteController extends Controller
         $request->validate([
             'archivo' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
             'nrc'     => ['required', 'string'],
-        ], [
-            'archivo.required' => 'Debes seleccionar un archivo.',
-            'archivo.mimes'    => 'El archivo debe ser .xlsx, .xls o .csv.',
-            'archivo.max'      => 'El archivo no debe superar los 5MB.',
         ]);
 
-        $materia = Materia::where('nrc', $nrc)
-                          ->where('profesor_id', Auth::id())
-                          ->firstOrFail();
+        $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
 
         try {
             $import = new EstudiantesImport($nrc);

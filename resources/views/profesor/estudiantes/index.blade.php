@@ -32,6 +32,28 @@
             </div>
         @endif
 
+
+        {{-- Clave única generada --}}
+        @if(session('clave_generada'))
+            <div class="mb-4 p-5 bg-[#002d62] text-white rounded-xl shadow-lg">
+                <div class="flex items-center gap-3 mb-3">
+                    <svg class="w-6 h-6 text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                    <div>
+                        <p class="font-black text-sm uppercase tracking-wide">Clave de acceso generada</p>
+                        <p class="text-blue-200 text-xs">Para: {{ session('nombre_alumno') }}</p>
+                    </div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-xs text-blue-200 uppercase tracking-widest mb-1">Clave única de acceso</p>
+                    <p class="text-3xl font-black tracking-[0.3em] text-yellow-400">{{ session('clave_generada') }}</p>
+                </div>
+                <p class="text-xs text-blue-200 mt-3 text-center italic">
+                    ⚠️ Comparte esta clave con el alumno. Solo se muestra una vez.
+                </p>
+            </div>
+        @endif
         @if(session('warning'))
             <div class="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-xl">
                 <strong>{{ session('warning') }}</strong>

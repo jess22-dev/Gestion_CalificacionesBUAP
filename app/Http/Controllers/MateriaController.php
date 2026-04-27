@@ -27,7 +27,6 @@ class MateriaController extends Controller
         ]);
 
         Materia::create($request->all());
-
         return redirect()->route('materias.index')->with('success', 'Materia creada con éxito.');
     }
 
@@ -44,7 +43,6 @@ class MateriaController extends Controller
         ]);
 
         $materia->update($request->all());
-
         return redirect()->route('materias.index')->with('success', 'Materia actualizada.');
     }
 
@@ -55,7 +53,7 @@ class MateriaController extends Controller
     }
 
     /**
-     * Ver detalle del grupo — Actividades + Alumnos
+     * Vista detalle del grupo — usa materia_estudiante para la lista de alumnos
      */
     public function show($nrc)
     {
@@ -63,15 +61,23 @@ class MateriaController extends Controller
                           ->where('profesor_id', Auth::id())
                           ->firstOrFail();
 
-        // Alumnos inscritos con datos del pivot
-        $alumnos = $materia->alumnos()->withPivot('clave_unica', 'status', 'promedio_real', 'promedio_redondeado')->get();
+        // Estudiantes del nuevo módulo de alta
+        $estudiantes = $materia->estudiantes()
+                               ->wherePivot('status', 'activo')
+                               ->get();
 
         // Actividades de la materia
-        $actividades = $materia->actividades()->orderBy('created_at', 'asc')->get();
+        $actividades = $materia->actividades()
+                               ->orderBy('created_at', 'asc')
+                               ->get();
 
-        // Ponderación total usada
         $ponderacionTotal = $actividades->sum('ponderacion');
 
-        return view('profesor.grupos-detalle', compact('materia', 'alumnos', 'actividades', 'ponderacionTotal'));
+        return view('profesor.grupos-detalle', compact(
+            'materia',
+            'estudiantes',
+            'actividades',
+            'ponderacionTotal'
+        ));
     }
 }

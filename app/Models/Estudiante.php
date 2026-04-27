@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Estudiante extends Model
 {
@@ -15,10 +16,36 @@ class Estudiante extends Model
         'nombre',
         'email',
         'codigo_estudiante',
+        'clave_unica',
     ];
 
     /**
-     * Materias en las que está inscrito este estudiante
+     * Generar clave única alfanumérica de 10 dígitos
+     * Solo si el estudiante no tiene una ya
+     */
+    public static function generarClaveUnica(): string
+    {
+        do {
+            // Genera clave alfanumérica de 10 caracteres en mayúsculas
+            $clave = strtoupper(Str::random(10));
+        } while (self::where('clave_unica', $clave)->exists());
+
+        return $clave;
+    }
+
+    /**
+     * Asignar clave única si es la primera vez que se registra
+     */
+    public function asignarClaveUnicaSiNecesario(): void
+    {
+        if (empty($this->clave_unica)) {
+            $this->clave_unica = self::generarClaveUnica();
+            $this->save();
+        }
+    }
+
+    /**
+     * Materias en las que está inscrito
      */
     public function materias()
     {
@@ -34,7 +61,7 @@ class Estudiante extends Model
     }
 
     /**
-     * Verificar si el estudiante ya está en otra materia
+     * Verificar si ya está en otra materia
      */
     public function estaEnOtraMateria(string $nrcActual): bool
     {
@@ -44,7 +71,7 @@ class Estudiante extends Model
     }
 
     /**
-     * Verificar si ya está inscrito en esta materia
+     * Verificar si ya está en esta materia
      */
     public function estaEnMateria(string $nrc): bool
     {

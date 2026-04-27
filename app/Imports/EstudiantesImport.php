@@ -3,8 +3,10 @@
 namespace App\Imports;
 
 use App\Models\Estudiante;
-use App\Models\Materia;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -33,13 +35,11 @@ class EstudiantesImport implements ToModel, WithHeadingRow, WithValidation, Skip
             return null;
         }
 
-        // Buscar si el estudiante ya existe en la tabla estudiantes
         $estudiante = Estudiante::where('email', $row['email'])
                                 ->orWhere('codigo_estudiante', (string) $row['codigo_estudiante'])
                                 ->first();
 
         if ($estudiante) {
-            // Ya existe — verificar si ya está en ESTA materia
             if ($estudiante->estaEnMateria($this->materiaNrc)) {
                 $this->duplicados[] = [
                     'nombre' => $estudiante->nombre,
@@ -49,7 +49,6 @@ class EstudiantesImport implements ToModel, WithHeadingRow, WithValidation, Skip
                 return null;
             }
 
-            // Está en otra materia — vincularlo a esta
             if ($estudiante->estaEnOtraMateria($this->materiaNrc)) {
                 $this->yaEnOtraMateria[] = [
                     'nombre' => $estudiante->nombre,
@@ -58,32 +57,66 @@ class EstudiantesImport implements ToModel, WithHeadingRow, WithValidation, Skip
                 ];
             }
 
-            // Vincular a esta materia
+            // Vincular a materia_estudiante
             $estudiante->materias()->attach($this->materiaNrc, [
                 'profesor_id' => Auth::id(),
                 'status'      => 'activo',
             ]);
 
+            // Vincular en alumno_materia si tiene user
+            $userAlumno = User::where('email', $estudiante->email)->first();
+            if ($userAlumno) {
+                $this->vincularAlumnoMateria($userAlumno, $estudiante->codigo_estudiante);
+            }
+
             $this->importados++;
-            return null; // No crear nuevo registro en estudiantes
+            return null;
         }
 
-        // Nuevo estudiante — crear y vincular
-        $nuevoEstudiante = new Estudiante([
+        // Nuevo estudiante
+        $claveUnica = Estudiante::generarClaveUnica();
+
+        $nuevoEstudiante = Estudiante::create([
             'nombre'            => $row['nombre'],
             'email'             => $row['email'],
             'codigo_estudiante' => (string) $row['codigo_estudiante'],
+            'clave_unica'       => $claveUnica,
         ]);
 
-        $nuevoEstudiante->save();
+        // Crear user con rol alumno
+        $userAlumno = User::firstOrCreate(
+            ['email' => $row['email']],
+            [
+                'name'     => $row['nombre'],
+                'password' => Hash::make(Str::random(16)),
+                'role'     => 'alumno',
+            ]
+        );
 
+        // Vincular en materia_estudiante
         $nuevoEstudiante->materias()->attach($this->materiaNrc, [
             'profesor_id' => Auth::id(),
             'status'      => 'activo',
         ]);
 
+        // Vincular en alumno_materia
+        $this->vincularAlumnoMateria($userAlumno, (string) $row['codigo_estudiante'], $claveUnica);
+
         $this->importados++;
         return null;
+    }
+
+    private function vincularAlumnoMateria(User $user, string $codigoEstudiante, string $claveAsistencia = null): void
+    {
+        $yaVinculado = $user->materias()->where('materia_nrc', $this->materiaNrc)->exists();
+
+        if (!$yaVinculado) {
+            $user->materias()->attach($this->materiaNrc, [
+                'clave_unica'      => $codigoEstudiante,
+                'clave_asistencia' => $claveAsistencia ?? Estudiante::generarClaveUnica(),
+                'status'           => 'activo',
+            ]);
+        }
     }
 
     public function rules(): array

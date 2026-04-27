@@ -22,6 +22,7 @@
                 </div>
             @endif
 
+            {{-- Barra superior --}}
             <div class="mb-6 flex justify-between items-center">
                 <a href="{{ route('dashboard') }}" class="text-[#1e4b8a] font-bold hover:underline flex items-center">
                     ← Volver al Dashboard
@@ -47,9 +48,7 @@
 
                 <div class="p-8">
 
-                    {{-- ========================= --}}
                     {{-- CALIFICACIONES --}}
-                    {{-- ========================= --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                         {{-- Formulario Crear Actividad --}}
@@ -58,16 +57,12 @@
 
                             <form action="{{ route('profesor.actividades.store', $materia->nrc) }}" method="POST" class="space-y-3">
                                 @csrf
-
                                 <div>
                                     <input type="text" name="nombre" value="{{ old('nombre') }}"
                                         placeholder="Nombre actividad"
                                         class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a] @error('nombre') border-red-400 @enderror">
-                                    @error('nombre')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
+                                    @error('nombre')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
-
                                 <div>
                                     <select name="categoria" class="w-full rounded-xl border-gray-300 @error('categoria') border-red-400 @enderror">
                                         <option value="">-- Selecciona categoría --</option>
@@ -76,30 +71,20 @@
                                         <option value="Examen" {{ old('categoria') == 'Examen' ? 'selected' : '' }}>Examen (20%)</option>
                                         <option value="Proyecto Final" {{ old('categoria') == 'Proyecto Final' ? 'selected' : '' }}>Proyecto Final (40%)</option>
                                     </select>
-                                    @error('categoria')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
+                                    @error('categoria')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
-
                                 <div>
                                     <input type="number" name="ponderacion" value="{{ old('ponderacion') }}"
-                                        placeholder="Ponderación (%) Ej: 20"
-                                        min="1" max="100"
+                                        placeholder="Ponderación (%) Ej: 20" min="1" max="100"
                                         class="w-full rounded-xl border-gray-300 @error('ponderacion') border-red-400 @enderror">
-                                    @error('ponderacion')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
+                                    @error('ponderacion')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
-
-                                {{-- Indicador ponderación --}}
                                 <div class="bg-blue-50 rounded-xl p-3 text-sm">
                                     <span class="text-blue-600 font-bold">Usado: {{ $ponderacionTotal }}%</span>
                                     <span class="text-gray-500"> / Disponible: {{ 100 - $ponderacionTotal }}%</span>
                                 </div>
-
                                 <button type="submit"
-                                    class="w-full bg-[#002d62] text-white py-2 rounded-xl font-bold hover:bg-[#1e4b8a] transition
-                                    {{ $ponderacionTotal >= 100 ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    class="w-full bg-[#002d62] text-white py-2 rounded-xl font-bold hover:bg-[#1e4b8a] transition {{ $ponderacionTotal >= 100 ? 'opacity-50 cursor-not-allowed' : '' }}"
                                     {{ $ponderacionTotal >= 100 ? 'disabled' : '' }}>
                                     Crear Actividad
                                 </button>
@@ -114,11 +99,8 @@
                                     {{ $actividades->count() }} creada(s)
                                 </span>
                             </div>
-
                             @if($actividades->isEmpty())
-                                <p class="text-gray-400 text-sm italic text-center py-6">
-                                    No hay actividades aún. Crea la primera usando el formulario.
-                                </p>
+                                <p class="text-gray-400 text-sm italic text-center py-6">No hay actividades aún.</p>
                             @else
                                 <ul class="space-y-3">
                                     @foreach($actividades as $actividad)
@@ -135,27 +117,19 @@
                                             <div>
                                                 <p class="font-bold text-gray-700 text-sm">{{ $actividad->nombre }}</p>
                                                 <div class="flex gap-2 mt-1">
-                                                    <span class="{{ $badgeColor }} text-[10px] font-black px-2 py-0.5 rounded uppercase">
-                                                        {{ $actividad->categoria }}
-                                                    </span>
+                                                    <span class="{{ $badgeColor }} text-[10px] font-black px-2 py-0.5 rounded uppercase">{{ $actividad->categoria }}</span>
                                                     <span class="text-xs text-gray-500 font-bold">{{ $actividad->ponderacion }}%</span>
                                                 </div>
                                             </div>
                                             <form action="{{ route('profesor.actividades.destroy', [$materia->nrc, $actividad->id]) }}"
-                                                  method="POST"
-                                                  onsubmit="return confirm('¿Eliminar esta actividad?')">
+                                                  method="POST" onsubmit="return confirm('¿Eliminar esta actividad?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit"
-                                                    class="text-red-400 hover:text-red-600 transition text-xs font-bold">
-                                                    Eliminar
-                                                </button>
+                                                <button type="submit" class="text-red-400 hover:text-red-600 transition text-xs font-bold">Eliminar</button>
                                             </form>
                                         </li>
                                     @endforeach
                                 </ul>
-
-                                {{-- Total ponderación --}}
                                 <div class="mt-4 flex justify-between items-center p-3 bg-gray-800 rounded-xl">
                                     <span class="text-sm font-black text-white">Total</span>
                                     <span class="font-black {{ $ponderacionTotal == 100 ? 'text-green-400' : 'text-yellow-400' }}">
@@ -164,16 +138,11 @@
                                 </div>
                             @endif
                         </div>
-
                     </div>
 
-                    {{-- ========================= --}}
                     {{-- CONTROL DE ASISTENCIA --}}
-                    {{-- ========================= --}}
                     <div class="mt-10 bg-white p-6 rounded-2xl shadow-xl border">
-                        <h3 class="text-xl font-bold text-[#002d62] mb-4">
-                            📋 Control de Asistencia
-                        </h3>
+                        <h3 class="text-xl font-bold text-[#002d62] mb-4"> Control de Asistencia</h3>
                         <div class="grid md:grid-cols-3 gap-6">
                             <div>
                                 <label class="text-xs font-bold text-gray-500 uppercase">Duración</label>
@@ -184,61 +153,54 @@
                                 </select>
                             </div>
                             <div class="flex items-end gap-2">
-                                <button class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold">
-                                    Iniciar 
-                                </button>
-                                <button class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">
-                                    Detener 
-                                </button>
+                                <button class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold">Iniciar </button>
+                                <button class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">Detener </button>
                             </div>
                             <div class="flex items-end">
-                                <button class="bg-[#002d62] text-white px-4 py-2 rounded-xl font-bold">
-                                    Escanear QR 
-                                </button>
+                                <button class="bg-[#002d62] text-white px-4 py-2 rounded-xl font-bold">Escanear QR </button>
                             </div>
                         </div>
                     </div>
 
-                    {{-- ========================= --}}
-                    {{-- LISTA DE ALUMNOS --}}
-                    {{-- ========================= --}}
+                    {{-- LISTA DE ALUMNOS desde materia_estudiante --}}
                     <div class="mt-8 bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-[#002d62]">
-                                Lista de Alumnos
-                            </h3>
+                            <h3 class="text-lg font-bold text-[#002d62]">Lista de Alumnos</h3>
                             <span class="text-xs font-black bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-                                {{ $alumnos->count() }} alumno(s)
+                                {{ $estudiantes->count() }} alumno(s)
                             </span>
                         </div>
 
-                        @if($alumnos->isEmpty())
+                        @if($estudiantes->isEmpty())
                             <div class="text-center py-10 text-gray-400">
-                         
                                 <p class="italic text-sm">No hay alumnos inscritos en este grupo aún.</p>
+                                <a href="{{ route('profesor.estudiantes.index', ['nrc' => $materia->nrc]) }}"
+                                   class="inline-block mt-3 text-sm text-[#1e4b8a] font-bold hover:underline">
+                                    + Dar de alta estudiantes
+                                </a>
                             </div>
                         @else
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm">
                                     <thead class="bg-[#002d62] text-white">
                                         <tr>
-                                            <th class="p-3 text-left text-xs uppercase">Matrícula</th>
                                             <th class="p-3 text-left text-xs uppercase">Nombre</th>
-                                            <th class="p-3 text-left text-xs uppercase">Email</th>
+                                            <th class="p-3 text-left text-xs uppercase">Código</th>
                                             <th class="p-3 text-center text-xs uppercase">Estado</th>
                                             <th class="p-3 text-center text-xs uppercase">Asistencia</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100">
-                                        @foreach($alumnos as $alumno)
+                                        @foreach($estudiantes as $estudiante)
                                         <tr class="hover:bg-gray-50 transition">
-                                            <td class="p-3 font-mono text-blue-700 font-bold">
-                                                {{ $alumno->pivot->clave_unica ?? '—' }}
+                                            <td class="p-3 font-semibold text-gray-800">{{ $estudiante->nombre }}</td>
+                                            <td class="p-3">
+                                                <span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded">
+                                                    {{ $estudiante->codigo_estudiante }}
+                                                </span>
                                             </td>
-                                            <td class="p-3 font-semibold text-gray-800">{{ $alumno->name }}</td>
-                                            <td class="p-3 text-gray-500">{{ $alumno->email }}</td>
                                             <td class="p-3 text-center">
-                                                @if(($alumno->pivot->status ?? 'activo') === 'activo')
+                                                @if(($estudiante->pivot->status ?? 'activo') === 'activo')
                                                     <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">Activo</span>
                                                 @else
                                                     <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">Baja</span>

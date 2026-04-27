@@ -73,10 +73,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Asistencia
         Route::get('/asistencia/{nrc}', function ($nrc) {
-            $materia = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
-            $alumnos = $materia->estudiantes()->wherePivot('status', 'activo')->get();
-            return view('profesor.asistencia', compact('materia', 'alumnos'));
-        })->name('profesor.asistencia');
+    $materia  = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
+    $alumnos  = $materia->estudiantes()->wherePivot('status', 'activo')->get();
+    $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
+                        ->where('activa', true)
+                        ->where('termina_en', '>', now())
+                        ->latest()
+                        ->first();
+    return view('profesor.asistencia', compact('materia', 'alumnos', 'asistenciaActiva'));
+})->name('profesor.asistencia');
 
         Route::post('/asistencia/{nrc}/guardar', function ($nrc) {
             return back()->with('success', 'Lista de asistencia guardada correctamente.');

@@ -61,23 +61,29 @@ class MateriaController extends Controller
                           ->where('profesor_id', Auth::id())
                           ->firstOrFail();
 
-        // Estudiantes del nuevo módulo de alta
         $estudiantes = $materia->estudiantes()
                                ->wherePivot('status', 'activo')
                                ->get();
 
-        // Actividades de la materia
         $actividades = $materia->actividades()
                                ->orderBy('created_at', 'asc')
                                ->get();
 
         $ponderacionTotal = $actividades->sum('ponderacion');
 
+        // Verificar si hay asistencia activa y no ha expirado
+        $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
+                              ->where('activa', true)
+                              ->where('termina_en', '>', now())
+                              ->latest()
+                              ->first();
+
         return view('profesor.grupos-detalle', compact(
             'materia',
             'estudiantes',
             'actividades',
-            'ponderacionTotal'
+            'ponderacionTotal',
+            'asistenciaActiva'
         ));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Materia;
+use App\Models\Estudiante;
 use Illuminate\Support\Facades\Auth;
 
 class AlumnoController extends Controller
@@ -12,31 +13,29 @@ class AlumnoController extends Controller
     {
         $user = Auth::user();
 
-        // Obtenemos las materias vinculadas al alumno con los datos de la tabla pivote
+        // Materias del alumno con datos del pivot
         $materias = $user->materias()
             ->withPivot('promedio_real', 'promedio_redondeado', 'status', 'qr_path', 'clave_asistencia')
+            ->where('alumno_materia.status', 'activo')
             ->get();
 
-        return view('alumno.dashboard', compact('materias'));
+        // Buscar datos del estudiante por email para el QR
+        $estudiante = Estudiante::where('email', $user->email)->first();
+
+        return view('alumno.dashboard', compact('materias', 'estudiante'));
     }
 
-    /**
-     * Lógica de Baja Automática (Requerimiento 3 y 4)
-     */
     public function solicitarBaja($nrc)
     {
-        $user = Auth::user();
-
-        // Buscamos la relación específica
+        $user    = Auth::user();
         $materia = $user->materias()->where('materia_nrc', $nrc)->first();
 
         if ($materia && $materia->pivot->status !== 'baja') {
-            // Actualizamos a status 'baja' y registramos la fecha
             $user->materias()->updateExistingPivot($nrc, [
-                'status' => 'baja',
-                'fecha_baja' => now()
+                'status'     => 'baja',
+                'fecha_baja' => now(),
             ]);
-            
+
             return back()->with('success', 'Baja procesada correctamente. Se ha notificado al docente.');
         }
 
@@ -45,11 +44,9 @@ class AlumnoController extends Controller
 
     public function show($nrc)
     {
-    $user = Auth::user();
-    
-    // Obtenemos la materia asociada a este alumno específico
-    $materia = $user->materias()->where('materias.nrc', $nrc)->firstOrFail();
+        $user    = Auth::user();
+        $materia = $user->materias()->where('materias.nrc', $nrc)->firstOrFail();
 
-    return view('alumno.show', compact('materia'));
+        return view('alumno.show', compact('materia'));
     }
 }

@@ -26,8 +26,11 @@ class AsistenciaDetalle extends Model
         return $this->belongsTo(Asistencia::class);
     }
 
+    /**
+     * Relación con Estudiante (no con User)
+     */
     public function alumno()
     {
-        return $this->belongsTo(User::class, 'alumno_id');
+        return $this->belongsTo(Estudiante::class, 'alumno_id');
     }
 }

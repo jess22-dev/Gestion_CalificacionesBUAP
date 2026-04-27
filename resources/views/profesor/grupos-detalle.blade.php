@@ -134,15 +134,27 @@
             </div>
 
             {{-- Módulo de Asistencia extendido --}}
-            <div class="mt-8 mb-4">
+            <div class="mt-8 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{-- Tomar Asistencia --}}
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex justify-between items-center">
                     <div>
-                        <h3 class="text-xl font-bold text-[#002d62]"> Módulo de Asistencia</h3>
-                        <p class="text-gray-500 text-sm">Gestiona la asistencia del grupo mediante código QR</p>
+                        <h3 class="text-lg font-bold text-[#002d62]"> Tomar Asistencia</h3>
+                        <p class="text-gray-500 text-sm">Inicia una sesión y escanea QR</p>
                     </div>
                     <a href="{{ route('profesor.asistencia', $materia->nrc) }}"
-                       class="bg-[#002d62] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#1e4b8a] transition shadow-lg">
-                        Tomar Asistencia →
+                       class="bg-[#002d62] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1e4b8a] transition shadow-lg text-sm">
+                        Iniciar →
+                    </a>
+                </div>
+                {{-- Ver Historial --}}
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-[#002d62]"> Historial de Asistencia</h3>
+                        <p class="text-gray-500 text-sm">Registro día por día de todos los alumnos</p>
+                    </div>
+                    <a href="{{ route('profesor.historial', $materia->nrc) }}"
+                       class="bg-[#1e4b8a] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#002d62] transition shadow-lg text-sm">
+                        Ver →
                     </a>
                 </div>
             </div>

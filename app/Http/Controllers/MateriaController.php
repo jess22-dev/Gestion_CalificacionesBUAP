@@ -61,29 +61,63 @@ class MateriaController extends Controller
                           ->where('profesor_id', Auth::id())
                           ->firstOrFail();
 
+        // Estudiantes del nuevo módulo de alta
         $estudiantes = $materia->estudiantes()
                                ->wherePivot('status', 'activo')
                                ->get();
 
+        // Actividades de la materia
         $actividades = $materia->actividades()
                                ->orderBy('created_at', 'asc')
                                ->get();
 
         $ponderacionTotal = $actividades->sum('ponderacion');
 
-        // Verificar si hay asistencia activa y no ha expirado
-        $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
-                              ->where('activa', true)
-                              ->where('termina_en', '>', now())
-                              ->latest()
-                              ->first();
-
         return view('profesor.grupos-detalle', compact(
             'materia',
             'estudiantes',
             'actividades',
-            'ponderacionTotal',
-            'asistenciaActiva'
+            'ponderacionTotal'
         ));
     }
+
+    /**
+     * Historial de asistencias — tabla cuadrícula
+     * Filas: alumnos | Columnas: fechas de sesiones
+     */
+    public function historial($nrc)
+    {
+        $materia = Materia::where('nrc', $nrc)
+                          ->where('profesor_id', Auth::id())
+                          ->firstOrFail();
+
+        // Todos los alumnos activos
+        $estudiantes = $materia->estudiantes()
+                               ->wherePivot('status', 'activo')
+                               ->orderBy('nombre')
+                               ->get();
+
+        // Todas las sesiones de asistencia de esta materia
+        $sesiones = \App\Models\Asistencia::where('materia_nrc', $nrc)
+                        ->orderBy('inicia_en', 'asc')
+                        ->get();
+
+        // Para cada sesión, obtener qué alumnos asistieron
+        // Resultado: ['sesion_id' => ['alumno_id' => true/false]]
+        $registros = [];
+        foreach ($sesiones as $sesion) {
+            $detalles = \App\Models\AsistenciaDetalle::where('asistencia_id', $sesion->id)
+                            ->pluck('asistio', 'alumno_id')
+                            ->toArray();
+            $registros[$sesion->id] = $detalles;
+        }
+
+        return view('profesor.historial-asistencia', compact(
+            'materia',
+            'estudiantes',
+            'sesiones',
+            'registros'
+        ));
+    }
+
 }

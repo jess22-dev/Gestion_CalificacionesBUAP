@@ -71,21 +71,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/grupo/{nrc}/actividades', [ActividadController::class, 'store'])->name('profesor.actividades.store');
         Route::delete('/grupo/{nrc}/actividades/{actividad}', [ActividadController::class, 'destroy'])->name('profesor.actividades.destroy');
 
-        // Asistencia
+        // Asistencia — tomar lista
         Route::get('/asistencia/{nrc}', function ($nrc) {
-    $materia  = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
-    $alumnos  = $materia->estudiantes()->wherePivot('status', 'activo')->get();
-    $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
-                        ->where('activa', true)
-                        ->where('termina_en', '>', now())
-                        ->latest()
-                        ->first();
-    return view('profesor.asistencia', compact('materia', 'alumnos', 'asistenciaActiva'));
-})->name('profesor.asistencia');
+            $materia  = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
+            $alumnos  = $materia->estudiantes()->wherePivot('status', 'activo')->get();
+            $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
+                                ->where('activa', true)
+                                ->where('termina_en', '>', now())
+                                ->latest()
+                                ->first();
+            return view('profesor.asistencia', compact('materia', 'alumnos', 'asistenciaActiva'));
+        })->name('profesor.asistencia');
 
         Route::post('/asistencia/{nrc}/guardar', function ($nrc) {
             return back()->with('success', 'Lista de asistencia guardada correctamente.');
-             })->name('asistencias.guardar');
+        })->name('asistencias.guardar');
+
+        // Historial de asistencias
+        Route::get('/grupo/{nrc}/historial', [MateriaController::class, 'historial'])->name('profesor.historial');
     });
 
     // 5. SECCIÓN ALUMNO
@@ -109,8 +112,8 @@ require __DIR__.'/auth.php';
 // 8. Módulo Alta de Estudiantes
 require __DIR__.'/estudiantes.php';
 
-// 9. API Asistencia (del compañero)
-Route::post('/asistencia/iniciar',    [AsistenciaController::class, 'iniciar']);
-Route::post('/asistencia/detener',    [AsistenciaController::class, 'detener']);
-Route::post('/asistencia/qr',         [AsistenciaController::class, 'registrarQR']);
-Route::post('/asistencia/registrar',  [AsistenciaController::class, 'registrar']);
+// 9. API Asistencia
+Route::post('/asistencia/iniciar',   [AsistenciaController::class, 'iniciar']);
+Route::post('/asistencia/detener',   [AsistenciaController::class, 'detener']);
+Route::post('/asistencia/qr',        [AsistenciaController::class, 'registrarQR']);
+Route::post('/asistencia/registrar', [AsistenciaController::class, 'registrar']);

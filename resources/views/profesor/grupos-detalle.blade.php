@@ -1,3 +1,5 @@
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <x-app-layout>
     <x-slot name="header">
         {{ __('Gestión de Grupo') }}
@@ -48,37 +50,27 @@
 
                 <div class="p-8">
 
-                    {{-- CALIFICACIONES --}}
+                    {{-- ACTIVIDADES --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                        {{-- Formulario Crear Actividad --}}
+                        {{-- Formulario --}}
                         <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
                             <h3 class="font-bold text-lg mb-4 text-[#002d62]">Definir Actividad</h3>
-
                             <form action="{{ route('profesor.actividades.store', $materia->nrc) }}" method="POST" class="space-y-3">
                                 @csrf
-                                <div>
-                                    <input type="text" name="nombre" value="{{ old('nombre') }}"
-                                        placeholder="Nombre actividad"
-                                        class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a] @error('nombre') border-red-400 @enderror">
-                                    @error('nombre')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <select name="categoria" class="w-full rounded-xl border-gray-300 @error('categoria') border-red-400 @enderror">
-                                        <option value="">-- Selecciona categoría --</option>
-                                        <option value="Prácticas" {{ old('categoria') == 'Prácticas' ? 'selected' : '' }}>Prácticas (20%)</option>
-                                        <option value="Tareas" {{ old('categoria') == 'Tareas' ? 'selected' : '' }}>Tareas (20%)</option>
-                                        <option value="Examen" {{ old('categoria') == 'Examen' ? 'selected' : '' }}>Examen (20%)</option>
-                                        <option value="Proyecto Final" {{ old('categoria') == 'Proyecto Final' ? 'selected' : '' }}>Proyecto Final (40%)</option>
-                                    </select>
-                                    @error('categoria')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <input type="number" name="ponderacion" value="{{ old('ponderacion') }}"
-                                        placeholder="Ponderación (%) Ej: 20" min="1" max="100"
-                                        class="w-full rounded-xl border-gray-300 @error('ponderacion') border-red-400 @enderror">
-                                    @error('ponderacion')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                                </div>
+                                <input type="text" name="nombre" value="{{ old('nombre') }}"
+                                    placeholder="Nombre actividad"
+                                    class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a]">
+                                <select name="categoria" class="w-full rounded-xl border-gray-300">
+                                    <option value="">-- Selecciona categoría --</option>
+                                    <option value="Prácticas">Prácticas (20%)</option>
+                                    <option value="Tareas">Tareas (20%)</option>
+                                    <option value="Examen">Examen (20%)</option>
+                                    <option value="Proyecto Final">Proyecto Final (40%)</option>
+                                </select>
+                                <input type="number" name="ponderacion" value="{{ old('ponderacion') }}"
+                                    placeholder="Ponderación (%) Ej: 20" min="1" max="100"
+                                    class="w-full rounded-xl border-gray-300">
                                 <div class="bg-blue-50 rounded-xl p-3 text-sm">
                                     <span class="text-blue-600 font-bold">Usado: {{ $ponderacionTotal }}%</span>
                                     <span class="text-gray-500"> / Disponible: {{ 100 - $ponderacionTotal }}%</span>
@@ -91,7 +83,7 @@
                             </form>
                         </div>
 
-                        {{-- Lista de Actividades --}}
+                        {{-- Lista actividades --}}
                         <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-lg text-[#002d62]">Actividades</h3>
@@ -125,7 +117,7 @@
                                                   method="POST" onsubmit="return confirm('¿Eliminar esta actividad?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-red-400 hover:text-red-600 transition text-xs font-bold">Eliminar</button>
+                                                <button type="submit" class="text-red-400 hover:text-red-600 text-xs font-bold">Eliminar</button>
                                             </form>
                                         </li>
                                     @endforeach
@@ -143,26 +135,53 @@
                     {{-- CONTROL DE ASISTENCIA --}}
                     <div class="mt-10 bg-white p-6 rounded-2xl shadow-xl border">
                         <h3 class="text-xl font-bold text-[#002d62] mb-4"> Control de Asistencia</h3>
-                        <div class="grid md:grid-cols-3 gap-6">
+
+                        <div class="grid md:grid-cols-3 gap-6 mb-4">
                             <div>
                                 <label class="text-xs font-bold text-gray-500 uppercase">Duración</label>
-                                <select class="w-full mt-2 rounded-xl border-gray-200">
-                                    <option>5 minutos</option>
-                                    <option>10 minutos</option>
-                                    <option>15 minutos</option>
+                                <select class="w-full mt-2 rounded-xl border-gray-200" id="duracion">
+                                    <option value="5">5 minutos</option>
+                                    <option value="10">10 minutos</option>
+                                    <option value="15">15 minutos</option>
                                 </select>
                             </div>
                             <div class="flex items-end gap-2">
-                                <button class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold">Iniciar </button>
-                                <button class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">Detener </button>
+                                <button id="btnIniciar" class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-700 transition">
+                                    Iniciar 
+                                </button>
+                                <button id="btnDetener" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-600 transition">
+                                    Detener 
+                                </button>
                             </div>
                             <div class="flex items-end">
-                                <button class="bg-[#002d62] text-white px-4 py-2 rounded-xl font-bold">Escanear QR </button>
+                                <button id="btnQR" disabled
+                                    class="bg-gray-300 text-gray-500 px-4 py-2 rounded-xl font-bold cursor-not-allowed transition"
+                                    title="Primero inicia el control de asistencia">
+                                    Escanear QR 
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="contador" class="text-lg font-bold text-green-600 mb-2"></div>
+                        <div id="estado_asistencia" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 font-semibold">
+                             Asistencia activa — QR generados para todos los alumnos
+                        </div>
+
+                        <div id="reader" class="hidden" style="width:300px; margin-top:8px;"></div>
+                        <div id="qr_resultado" class="mt-3 hidden p-3 rounded-xl text-sm font-bold"></div>
+
+                        {{-- QRs generados al iniciar asistencia --}}
+                        <div id="qr_alumnos_container" class="hidden mt-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-base font-bold text-[#002d62]">QR de Alumnos — Sesión de hoy</h4>
+                                <span class="text-xs text-gray-400 italic" id="qr_fecha_label"></span>
+                            </div>
+                            <div id="qr_alumnos_grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             </div>
                         </div>
                     </div>
 
-                    {{-- LISTA DE ALUMNOS desde materia_estudiante --}}
+                    {{-- LISTA DE ALUMNOS --}}
                     <div class="mt-8 bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-bold text-[#002d62]">Lista de Alumnos</h3>
@@ -220,14 +239,14 @@
                 </div>
             </div>
 
-            {{-- Módulo de Asistencia --}}
+            {{-- Módulo de Asistencia extendido --}}
             <div class="mt-8 mb-4">
                 <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 flex justify-between items-center">
                     <div>
                         <h3 class="text-xl font-bold text-[#002d62]"> Módulo de Asistencia</h3>
                         <p class="text-gray-500 text-sm">Gestiona la asistencia del grupo mediante código QR</p>
                     </div>
-                    <a href="#"
+                    <a href="{{ route('profesor.asistencia', $materia->nrc) }}"
                        class="bg-[#002d62] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#1e4b8a] transition shadow-lg">
                         Tomar Asistencia →
                     </a>
@@ -236,4 +255,212 @@
 
         </div>
     </div>
+
+    {{-- QRCode.js para generar QRs de alumnos --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        let intervalo        = null;
+        let asistenciaActiva = false;
+        const materia_nrc    = "{{ $materia->nrc }}";
+        const materiaNombre  = "{{ $materia->Materia }}";
+        const csrf           = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrf
+        };
+
+        // Datos de alumnos desde Blade
+        const alumnos = @json($estudiantes->map(fn($e) => [
+            'nombre' => $e->nombre,
+            'codigo' => $e->codigo_estudiante,
+        ]));
+
+        // ─── INICIAR ────────────────────────────────────────────
+        document.getElementById('btnIniciar').addEventListener('click', function () {
+            const duracion = document.getElementById('duracion').value;
+
+            fetch('/asistencia/iniciar', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ materia_nrc, duracion })
+            })
+            .then(async res => {
+                let data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Error");
+                return data;
+            })
+            .then(data => {
+                asistenciaActiva = true;
+
+                // Habilitar botón QR
+                const btnQR = document.getElementById('btnQR');
+                btnQR.disabled = false;
+                btnQR.className = 'bg-[#002d62] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#1e4b8a] transition cursor-pointer';
+                btnQR.removeAttribute('title');
+
+                // Mostrar estado
+                document.getElementById('estado_asistencia').classList.remove('hidden');
+
+                // Generar QRs de alumnos
+                generarQRsAlumnos();
+
+                // Contador
+                let fin = new Date(data.fin);
+                if (intervalo) clearInterval(intervalo);
+
+                intervalo = setInterval(() => {
+                    let diff = Math.floor((fin - new Date()) / 1000);
+                    if (diff <= 0) {
+                        clearInterval(intervalo);
+                        document.getElementById('contador').innerHTML = " Tiempo finalizado";
+                        desactivarAsistencia();
+                        fetch('/asistencia/detener', { method: 'POST', headers, body: JSON.stringify({ materia_nrc }) });
+                        return;
+                    }
+                    let min = Math.floor(diff / 60);
+                    let seg = diff % 60;
+                    document.getElementById('contador').innerHTML = ` ${min}:${seg.toString().padStart(2,'0')} restantes`;
+                }, 1000);
+            })
+            .catch(error => alert(" " + error.message));
+        });
+
+        // ─── DETENER ────────────────────────────────────────────
+        document.getElementById('btnDetener').addEventListener('click', function () {
+            fetch('/asistencia/detener', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ materia_nrc })
+            })
+            .then(async res => {
+                let data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Error");
+                return data;
+            })
+            .then(() => {
+                if (intervalo) clearInterval(intervalo);
+                document.getElementById('contador').innerHTML = " Asistencia detenida";
+                desactivarAsistencia();
+            })
+            .catch(error => alert(" " + error.message));
+        });
+
+        // ─── ESCANEAR QR ────────────────────────────────────────
+        document.getElementById('btnQR').addEventListener('click', function () {
+            if (!asistenciaActiva) return;
+
+            const readerDiv = document.getElementById('reader');
+            readerDiv.classList.remove('hidden');
+
+            const html5QrCode = new Html5Qrcode("reader");
+            const resultado   = document.getElementById('qr_resultado');
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    html5QrCode.start(
+                        devices[0].id,
+                        { fps: 10, qrbox: 250 },
+                        (decodedText) => {
+                            html5QrCode.stop();
+                            readerDiv.classList.add('hidden');
+
+                            fetch('/asistencia/qr', {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify({ qr_data: decodedText, materia_nrc })
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    resultado.className = 'mt-3 p-3 rounded-xl text-sm font-bold bg-green-100 text-green-800';
+                                    resultado.innerHTML = ` Asistencia registrada: ${data.nombre}`;
+                                } else {
+                                    resultado.className = 'mt-3 p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700';
+                                    resultado.innerHTML = ` ${data.error}`;
+                                }
+                                resultado.classList.remove('hidden');
+                            })
+                            .catch(() => {
+                                resultado.className = 'mt-3 p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700';
+                                resultado.innerHTML = ' Error al registrar asistencia';
+                                resultado.classList.remove('hidden');
+                            });
+                        }
+                    );
+                }
+            }).catch(() => alert("No se pudo acceder a la cámara"));
+        });
+
+        // ─── GENERAR QRs DE ALUMNOS ─────────────────────────────
+        function generarQRsAlumnos() {
+            const hoy        = new Date().toISOString().split('T')[0];
+            const fechaLabel = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const grid       = document.getElementById('qr_alumnos_grid');
+            const container  = document.getElementById('qr_alumnos_container');
+
+            document.getElementById('qr_fecha_label').textContent = fechaLabel;
+            grid.innerHTML = '';
+
+            alumnos.forEach(alumno => {
+                const contenido = JSON.stringify({
+                    nombre:  alumno.nombre,
+                    codigo:  alumno.codigo,
+                    materia: materiaNombre,
+                    nrc:     materia_nrc,
+                    fecha:   hoy,
+                });
+
+                // Card del alumno
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-gray-200 rounded-2xl p-4 text-center shadow-sm';
+
+                const titulo = document.createElement('p');
+                titulo.className = 'text-xs font-bold text-[#002d62] mb-1 truncate';
+                titulo.textContent = alumno.nombre;
+
+                const codigo = document.createElement('p');
+                codigo.className = 'text-[10px] text-gray-400 mb-3';
+                codigo.textContent = alumno.codigo;
+
+                const qrDiv = document.createElement('div');
+                qrDiv.id = `qr_${alumno.codigo}`;
+                qrDiv.className = 'flex justify-center';
+
+                card.appendChild(titulo);
+                card.appendChild(codigo);
+                card.appendChild(qrDiv);
+                grid.appendChild(card);
+
+                // Generar QR
+                new QRCode(qrDiv, {
+                    text:         contenido,
+                    width:        120,
+                    height:       120,
+                    colorDark:    '#002d62',
+                    colorLight:   '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H,
+                });
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        // ─── DESACTIVAR ─────────────────────────────────────────
+        function desactivarAsistencia() {
+            asistenciaActiva = false;
+            const btnQR = document.getElementById('btnQR');
+            btnQR.disabled = true;
+            btnQR.className = 'bg-gray-300 text-gray-500 px-4 py-2 rounded-xl font-bold cursor-not-allowed transition';
+            btnQR.title = 'Primero inicia el control de asistencia';
+            document.getElementById('estado_asistencia').classList.add('hidden');
+            document.getElementById('qr_alumnos_container').classList.add('hidden');
+        }
+    });
+    </script>
+
 </x-app-layout>

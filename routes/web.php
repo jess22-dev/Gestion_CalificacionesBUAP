@@ -3,11 +3,12 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExcelController; 
-use App\Http\Controllers\AlumnoController; 
+use App\Http\Controllers\ExcelController;
+use App\Http\Controllers\AlumnoController;
 use App\Http\Controllers\MateriaController;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ActividadController;
+use App\Http\Controllers\AsistenciaController;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +16,7 @@ use App\Http\Controllers\ActividadController;
 |--------------------------------------------------------------------------
 */
 
-// 1. Redirección inicial: Si NO hay sesión, forzar LOGIN.
+// 1. Redirección inicial
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
@@ -23,14 +24,12 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Todas las rutas protegidas por autenticación
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 2. Redirección Inteligente (Controlador de tráfico principal)
+    // 2. Redirección Inteligente
     Route::get('/dashboard', function () {
         $user = Auth::user();
-        
-        // Verificación de seguridad: si no hay usuario o no hay rol, cerrar sesión
+
         if (!$user || !$user->role) {
             Auth::logout();
             return redirect('/login')->withErrors(['role' => 'Acceso denegado o rol no asignado.']);
@@ -50,12 +49,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['can:admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', function () {
             $materias = \App\Models\Materia::all();
-            return view('admin.index', compact('materias')); 
+            return view('admin.index', compact('materias'));
         })->name('admin.dashboard');
 
         Route::get('/importar', function () {
             $materias = \App\Models\Materia::all();
-            return view('admin.importar', compact('materias')); 
+            return view('admin.importar', compact('materias'));
         })->name('admin.importar');
 
         Route::post('/importar-excel', [ExcelController::class, 'importar'])->name('excel.importar');
@@ -66,13 +65,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('profesor.dashboard');
         Route::get('/materias', [DashboardController::class, 'index'])->name('profesor.materias');
         Route::get('/grupo/{nrc}', [DashboardController::class, 'showGrupo'])->name('profesor.materias.show');
+        Route::get('/materias/detalle/{nrc}', [MateriaController::class, 'show'])->name('materias.show');
+
+        // Actividades
         Route::post('/grupo/{nrc}/actividades', [ActividadController::class, 'store'])->name('profesor.actividades.store');
         Route::delete('/grupo/{nrc}/actividades/{actividad}', [ActividadController::class, 'destroy'])->name('profesor.actividades.destroy');
 
-        Route::get('/materias/detalle/{nrc}', [MateriaController::class, 'show'])->name('materias.show');
-        Route::get('/asistencia/{nrc}', function($nrc) {
-            return view('profesor.asistencia', compact('nrc'));
+        // Asistencia
+        Route::get('/asistencia/{nrc}', function ($nrc) {
+            $materia = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
+            $alumnos = $materia->estudiantes()->wherePivot('status', 'activo')->get();
+            return view('profesor.asistencia', compact('materia', 'alumnos'));
         })->name('profesor.asistencia');
+
+        Route::post('/asistencia/{nrc}/guardar', function ($nrc) {
+            return back()->with('success', 'Lista de asistencia guardada correctamente.');
+             })->name('asistencias.guardar');
     });
 
     // 5. SECCIÓN ALUMNO
@@ -84,12 +92,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/alumno/materia/{nrc}', [AlumnoController::class, 'show'])->name('alumno.materia.detalle');
     });
 
-    // 6. Configuración de Perfil 
+    // 6. Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// 7. Rutas de autenticación
+// 7. Autenticación
 require __DIR__.'/auth.php';
+
+// 8. Módulo Alta de Estudiantes
 require __DIR__.'/estudiantes.php';
+
+// 9. API Asistencia (del compañero)
+Route::post('/asistencia/iniciar',    [AsistenciaController::class, 'iniciar']);
+Route::post('/asistencia/detener',    [AsistenciaController::class, 'detener']);
+Route::post('/asistencia/qr',         [AsistenciaController::class, 'registrarQR']);
+Route::post('/asistencia/registrar',  [AsistenciaController::class, 'registrar']);

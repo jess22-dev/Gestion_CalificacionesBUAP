@@ -50,7 +50,7 @@
                     <p class="text-3xl font-black tracking-[0.3em] text-yellow-400">{{ session('clave_generada') }}</p>
                 </div>
                 <p class="text-xs text-blue-200 mt-3 text-center italic">
-                    ⚠️ Comparte esta clave con el alumno. Solo se muestra una vez.
+                     ADVERTENCIA: COMPARTE ESTA CLAVE CON EL ALUMNO. SOLO SE MUESTRA UNA VEZ.
                 </p>
             </div>
         @endif
@@ -70,7 +70,7 @@
 
         @if(session('yaEnOtraMateria') && count(session('yaEnOtraMateria')) > 0)
             <div class="mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-800 rounded-xl">
-                <strong>ℹ️ Estos alumnos ya estaban en otra materia y fueron agregados a esta:</strong>
+                <strong>ADVERTENCIA: Estos alumnos ya estaban en otra materia y fueron agregados a esta:</strong>
                 <ul class="mt-2 text-sm list-disc list-inside">
                     @foreach(session('yaEnOtraMateria') as $e)
                         <li>{{ $e['nombre'] }} — {{ $e['codigo'] }}</li>
@@ -107,7 +107,6 @@
         <div class="bg-white rounded-xl shadow overflow-hidden">
             @if($estudiantes->isEmpty())
                 <div class="text-center py-16 text-gray-400">
-                    <p class="text-4xl mb-3">📭</p>
                     <p class="font-medium">No hay estudiantes registrados en esta materia aún.</p>
                 </div>
             @else

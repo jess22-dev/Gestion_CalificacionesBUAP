@@ -76,6 +76,15 @@
                             </div>
                         </div>
 
+                        {{-- Ver calificaciones --}}
+                        <a href="{{ route('alumno.calificaciones', $materia->nrc) }}"
+                            class="w-full flex items-center justify-center py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-700 transition-all shadow-lg active:scale-95 mb-3">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            Ver Calificaciones
+                        </a>
+
                         {{-- Botón QR --}}
                         <button
                             onclick="abrirModalQR('{{ $materia->nrc }}', '{{ addslashes($materia->Materia) }}')"

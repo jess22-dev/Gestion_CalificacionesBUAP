@@ -17,21 +17,5 @@ class DashboardController extends Controller
         return view('profesor.dashboard', compact('materias'));
     }
 
-    /**
-     * Muestra el detalle de una materia — vista actividades
-     */
-    public function showGrupo($nrc)
-    {
-        $materia = Materia::where('nrc', $nrc)
-                          ->where('profesor_id', Auth::id())
-                          ->firstOrFail();
-
-        $alumnos     = $materia->alumnos;
-        $actividades = $materia->actividades()->orderBy('created_at', 'asc')->get();
-
-        // Calcular ponderación total usada
-        $ponderacionTotal = $actividades->sum('ponderacion');
-
-        return view('profesor.actividades', compact('materia', 'alumnos', 'actividades', 'ponderacionTotal'));
-    }
+    // showGrupo eliminado — usar MateriaController@show
 }

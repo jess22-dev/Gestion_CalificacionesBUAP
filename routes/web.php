@@ -174,7 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['can:profesor'])->prefix('profesor')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('profesor.dashboard');
         Route::get('/materias', [DashboardController::class, 'index'])->name('profesor.materias');
-        Route::get('/grupo/{nrc}', [DashboardController::class, 'showGrupo'])->name('profesor.materias.show');
+        Route::get('/grupo/{nrc}', [MateriaController::class, 'show'])->name('profesor.materias.show');
         Route::get('/materias/detalle/{nrc}', [MateriaController::class, 'show'])->name('materias.show');
 
         // Actividades
@@ -199,6 +199,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Historial de asistencias
         Route::get('/grupo/{nrc}/historial', [MateriaController::class, 'historial'])->name('profesor.historial');
+
+        // Calificaciones por actividad
+        Route::get('/grupo/{nrc}/actividades/{actividad}/detalle', [ActividadController::class, 'detalle'])->name('profesor.actividades.detalle');
+        Route::post('/grupo/{nrc}/actividades/{actividad}/calificar', [ActividadController::class, 'calificar'])->name('profesor.actividades.calificar');
     });
 
     // 5. SECCIÓN ALUMNO
@@ -208,6 +212,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/materia/{nrc}/baja', [AlumnoController::class, 'solicitarBaja'])->name('alumno.baja');
         Route::post('/asistencia/registrar', [AlumnoController::class, 'registrarAsistencia'])->name('alumno.asistencia.registrar');
         Route::get('/alumno/materia/{nrc}', [AlumnoController::class, 'show'])->name('alumno.materia.detalle');
+
+        // Calificaciones del alumno por materia
+        Route::get('/materia/{nrc}/calificaciones', [AlumnoController::class, 'calificaciones'])->name('alumno.calificaciones');
+
+        // Subir / eliminar archivo de actividad
+        Route::post('/actividad/{actividad}/subir', [ActividadController::class, 'subirArchivo'])->name('alumno.actividad.subir');
+        Route::delete('/actividad/{actividad}/eliminar', [ActividadController::class, 'eliminarArchivo'])->name('alumno.actividad.eliminar');
     });
 
     // 6. Perfil

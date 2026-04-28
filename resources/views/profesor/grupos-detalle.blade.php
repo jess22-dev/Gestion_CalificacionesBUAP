@@ -59,16 +59,28 @@
                                 <input type="text" name="nombre" value="{{ old('nombre') }}"
                                     placeholder="Nombre actividad"
                                     class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a]">
-                                <select name="categoria" class="w-full rounded-xl border-gray-300">
-                                    <option value="">-- Selecciona categoría --</option>
-                                    <option value="Prácticas">Prácticas (20%)</option>
-                                    <option value="Tareas">Tareas (20%)</option>
-                                    <option value="Examen">Examen (20%)</option>
-                                    <option value="Proyecto Final">Proyecto Final (40%)</option>
-                                </select>
-                                <input type="number" name="ponderacion" value="{{ old('ponderacion') }}"
-                                    placeholder="Ponderación (%) Ej: 20" min="1" max="100"
+
+                                <select name="categoria" id="categoria_select"
+                                    onchange="actualizarPonderacion(this)"
                                     class="w-full rounded-xl border-gray-300">
+                                    <option value="">-- Selecciona categoría --</option>
+                                    <option value="Prácticas" data-pond="20" {{ old('categoria') == 'Prácticas' ? 'selected' : '' }}>Prácticas (20% predeterminado)</option>
+                                    <option value="Tareas" data-pond="20" {{ old('categoria') == 'Tareas' ? 'selected' : '' }}>Tareas (20% predeterminado)</option>
+                                    <option value="Examen" data-pond="20" {{ old('categoria') == 'Examen' ? 'selected' : '' }}>Examen (20% predeterminado)</option>
+                                    <option value="Proyecto Final" data-pond="40" {{ old('categoria') == 'Proyecto Final' ? 'selected' : '' }}>Proyecto Final (40% predeterminado)</option>
+                                </select>
+
+                                <div class="relative">
+                                    <input type="number" name="ponderacion" id="ponderacion_input"
+                                        value="{{ old('ponderacion') }}"
+                                        placeholder="Ponderación % (opcional — usa el predeterminado)"
+                                        min="1" max="100"
+                                        class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a]">
+                                    <p class="text-xs text-gray-400 mt-1 italic" id="pond_hint">
+                                        Si lo dejas vacío, se usará el % predeterminado de la categoría.
+                                    </p>
+                                </div>
+
                                 <div class="bg-blue-50 rounded-xl p-3 text-sm">
                                     <span class="text-blue-600 font-bold">Usado: {{ $ponderacionTotal }}%</span>
                                     <span class="text-gray-500"> / Disponible: {{ 100 - $ponderacionTotal }}%</span>
@@ -79,6 +91,18 @@
                                     Crear Actividad
                                 </button>
                             </form>
+
+                            <script>
+                                function actualizarPonderacion(select) {
+                                    const opt   = select.options[select.selectedIndex];
+                                    const pond  = opt.dataset.pond;
+                                    const input = document.getElementById('ponderacion_input');
+                                    const hint  = document.getElementById('pond_hint');
+                                    if (pond && !input.value) {
+                                        hint.textContent = `Si lo dejas vacío se usará ${pond}% (predeterminado de ${opt.value}).`;
+                                    }
+                                }
+                            </script>
                         </div>
 
                         {{-- Lista actividades --}}
@@ -111,12 +135,18 @@
                                                     <span class="text-xs text-gray-500 font-bold">{{ $actividad->ponderacion }}%</span>
                                                 </div>
                                             </div>
-                                            <form action="{{ route('profesor.actividades.destroy', [$materia->nrc, $actividad->id]) }}"
-                                                  method="POST" onsubmit="return confirm('¿Eliminar esta actividad?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-400 hover:text-red-600 text-xs font-bold">Eliminar</button>
-                                            </form>
+                                            <div class="flex items-center gap-2">
+                                                <a href="{{ route('profesor.actividades.detalle', [$materia->nrc, $actividad->id]) }}"
+                                                   class="text-[#002d62] hover:text-[#1e4b8a] text-xs font-bold border border-[#002d62] px-2 py-1 rounded-lg hover:bg-blue-50 transition">
+                                                    Calificar
+                                                </a>
+                                                <form action="{{ route('profesor.actividades.destroy', [$materia->nrc, $actividad->id]) }}"
+                                                      method="POST" onsubmit="return confirm('¿Eliminar esta actividad?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-400 hover:text-red-600 text-xs font-bold">Eliminar</button>
+                                                </form>
+                                            </div>
                                         </li>
                                     @endforeach
                                 </ul>

@@ -15,21 +15,28 @@ class Actividad extends Model
         'materia_nrc',
     ];
 
-    /**
-     * Relación con la Materia
-     */
     public function materia()
     {
         return $this->belongsTo(Materia::class, 'materia_nrc', 'nrc');
     }
 
     /**
-     * Relación con los alumnos a través de actividad_user
+     * Alumnos (users) vinculados a esta actividad
      */
     public function alumnos()
     {
         return $this->belongsToMany(User::class, 'actividad_user', 'actividad_id', 'alumno_id')
-                    ->withPivot('calificacion')
+                    ->withPivot('calificacion', 'archivo_path', 'archivo_nombre', 'entregado')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Estudiantes vinculados a esta actividad
+     */
+    public function estudiantes()
+    {
+        return $this->belongsToMany(Estudiante::class, 'actividad_user', 'actividad_id', 'alumno_id')
+                    ->withPivot('calificacion', 'archivo_path', 'archivo_nombre', 'entregado')
                     ->withTimestamps();
     }
 }

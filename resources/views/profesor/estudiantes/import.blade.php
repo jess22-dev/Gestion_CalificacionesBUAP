@@ -69,7 +69,6 @@
                     <div id="dropZone"
                          onclick="document.getElementById('archivo').click()"
                          class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-[#002d62] hover:bg-blue-50 transition">
-                        <p class="text-3xl mb-2">📂</p>
                         <p id="dropLabel" class="text-gray-500 text-sm">
                             Arrastra tu archivo aquí o <u>haz clic para buscar</u>
                         </p>
@@ -97,13 +96,13 @@
 
         {{-- Ejemplo --}}
         <div class="mt-4 bg-gray-50 rounded-xl p-4">
-            <p class="text-sm font-semibold text-gray-600 mb-2">📋 Ejemplo de estructura:</p>
+            <p class="text-sm font-semibold text-gray-600 mb-2"> Ejemplo de estructura:</p>
             <table class="w-full text-sm bg-white rounded border border-gray-200">
                 <thead class="bg-green-100">
                     <tr>
                         <th class="px-3 py-2 text-left border-r border-gray-200">nombre</th>
                         <th class="px-3 py-2 text-left border-r border-gray-200">email</th>
-                        <th class="px-3 py-2 text-left">codigo_estudiante</th>
+                        <th class="px-3 py-2 text-left">matricula</th>
                     </tr>
                 </thead>
                 <tbody>

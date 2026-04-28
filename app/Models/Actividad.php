@@ -6,18 +6,37 @@ use Illuminate\Database\Eloquent\Model;
 
 class Actividad extends Model
 {
-    public function up()
-{
-    Schema::create('actividads', function (Blueprint $table) {
-        $table->id();
-        $table->string('nombre'); // Ej: "Examen Parcial 1"
-        $table->string('categoria'); // Ej: "Exámenes", "Tareas"
-        $table->integer('ponderacion'); // Ej: 20 (para 20%)
-        $table->string('materia_nrc'); // Relación con tu tabla Materias
-        
-        // Clave foránea que apunta al NRC de tu tabla materias
-        $table->foreign('materia_nrc')->references('nrc')->on('materias')->onDelete('cascade');
-        $table->timestamps();
-    });
-}
+    protected $table = 'actividads';
+
+    protected $fillable = [
+        'nombre',
+        'categoria',
+        'ponderacion',
+        'materia_nrc',
+    ];
+
+    public function materia()
+    {
+        return $this->belongsTo(Materia::class, 'materia_nrc', 'nrc');
+    }
+
+    /**
+     * Alumnos (users) vinculados a esta actividad
+     */
+    public function alumnos()
+    {
+        return $this->belongsToMany(User::class, 'actividad_user', 'actividad_id', 'alumno_id')
+                    ->withPivot('calificacion', 'archivo_path', 'archivo_nombre', 'entregado')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Estudiantes vinculados a esta actividad
+     */
+    public function estudiantes()
+    {
+        return $this->belongsToMany(Estudiante::class, 'actividad_user', 'actividad_id', 'alumno_id')
+                    ->withPivot('calificacion', 'archivo_path', 'archivo_nombre', 'entregado')
+                    ->withTimestamps();
+    }
 }

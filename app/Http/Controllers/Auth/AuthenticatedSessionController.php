@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Estudiante;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Añadido para buscar el código
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -19,55 +20,50 @@ class AuthenticatedSessionController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        // 1. LÓGICA ESPECIAL PARA ALUMNOS (Login con Clave Única)
-        if ($request->role === 'alumno') {
-            // Buscamos la clave en la tabla de unión [Req 7]
-            $registro = DB::table('alumno_materia')
-                ->where('clave_unica', $request->codigo)
-                ->where('status', 'activo')
-                ->first();
+        $role = $request->input('role');
 
-            if ($registro) {
-                // Si existe, buscamos al usuario en la tabla 'users' y lo logueamos
-                $user = \App\Models\User::find($registro->alumno_id);
-                
-                if ($user) {
-                    Auth::login($user);
-                    $request->session()->regenerate();
-                    return redirect()->route('alumno.dashboard');
-                }
+        // Login especial para alumnos con clave única
+        if ($role === 'alumno') {
+            $claveUnica = trim($request->input('codigo'));
+
+            // Buscar estudiante por clave única
+            $estudiante = Estudiante::where('clave_unica', $claveUnica)->first();
+
+            if (!$estudiante) {
+                return back()->withErrors([
+                    'codigo' => 'La clave única no es válida. Verifica e intenta de nuevo.',
+                ])->onlyInput('role');
             }
 
-            // Si no existe o falló algo, regresamos con error específico
-            return back()->withErrors([
-                'codigo' => 'La clave única no es válida o el alumno no está activo.',
-            ]);
+            // Buscar el user con rol alumno asociado a ese email
+            $userAlumno = User::where('email', $estudiante->email)
+                              ->where('role', 'alumno')
+                              ->first();
+
+            if (!$userAlumno) {
+                return back()->withErrors([
+                    'codigo' => 'No se encontró una cuenta de alumno asociada a esta clave.',
+                ])->onlyInput('role');
+            }
+
+            // Autenticar al alumno usando el guard web
+            Auth::login($userAlumno);
+            $request->session()->regenerate();
+
+            return redirect()->route('alumno.dashboard');
         }
 
-        // 2. LÓGICA PARA ADMIN Y PROFESOR (Login tradicional)
-        $request->authenticate(); // Valida email y password
-
+        // Login normal para profesor y admin
+        $request->authenticate();
         $request->session()->regenerate();
 
-        // Redirección inteligente según el rol al entrar
-        $user = Auth::user();
-        
-        if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        } elseif ($user->role === 'profesor') {
-            return redirect()->route('profesor.dashboard');
-        }
-
-        // Caso por defecto (o si falló la detección de rol)
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');

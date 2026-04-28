@@ -3,149 +3,267 @@
 namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
+use App\Models\Materia;
+use App\Models\User;
 use App\Imports\EstudiantesImport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class EstudianteController extends Controller
 {
     /**
-     * Listar todos los estudiantes
+     * Listar estudiantes de una materia específica del profesor
      */
-    public function index()
+    public function index(Request $request)
     {
-        $estudiantes = Estudiante::latest()->paginate(15);
-        return view('profesor.estudiantes.index', compact('estudiantes'));
+        $nrc     = $request->query('nrc');
+        $materia = null;
+
+        if ($nrc) {
+            $materia = Materia::where('nrc', $nrc)
+                              ->where('profesor_id', Auth::id())
+                              ->firstOrFail();
+
+            $estudiantes = $materia->estudiantes()
+                                   ->wherePivot('status', 'activo')
+                                   ->paginate(15);
+        } else {
+            $estudiantes = collect()->paginate(15);
+        }
+
+        return view('profesor.estudiantes.index', compact('estudiantes', 'materia', 'nrc'));
     }
 
     /**
-     * Mostrar formulario para agregar manualmente
+     * Formulario para agregar manualmente
      */
-    public function create()
+    public function create(Request $request)
     {
-        return view('profesor.estudiantes.create');
+        $nrc     = $request->query('nrc');
+        $materia = null;
+
+        if ($nrc) {
+            $materia = Materia::where('nrc', $nrc)
+                              ->where('profesor_id', Auth::id())
+                              ->firstOrFail();
+        }
+
+        return view('profesor.estudiantes.create', compact('materia', 'nrc'));
     }
 
     /**
-     * Guardar estudiante manual catch
+     * Guardar estudiante manual
+     * - Si es nuevo: crea en estudiantes + crea user alumno + vincula en alumno_materia
+     * - Si existe: verifica si ya está en esta materia o en otra
      */
     public function store(Request $request)
     {
+        $nrc = $request->input('nrc');
+
         $request->validate([
             'nombre'            => ['required', 'string', 'max:255'],
-            'email'             => ['required', 'email', 'max:255', 'unique:estudiantes,email'],
-            'codigo_estudiante' => ['required', 'string', 'digits:9', 'unique:estudiantes,codigo_estudiante'],
+            'email'             => ['required', 'email', 'max:255'],
+            'codigo_estudiante' => ['required', 'digits:9'],
+            'nrc'               => ['required', 'string'],
         ], [
-            'nombre.required'               => 'El nombre es obligatorio.',
-            'email.required'                => 'El email es obligatorio.',
-            'email.email'                   => 'El email no tiene un formato válido.',
-            'email.unique'                  => 'Ya existe un estudiante con ese email.',
-            'codigo_estudiante.required'    => 'El código es obligatorio.',
-            'codigo_estudiante.unique'      => 'Ya existe un estudiante con ese código.',
-            'codigo_estudiante.digits'      => 'El código debe ser de 9 digitos.',
+            'nombre.required'            => 'El nombre es obligatorio.',
+            'email.required'             => 'El email es obligatorio.',
+            'email.email'                => 'El formato del email no es válido.',
+            'codigo_estudiante.required' => 'El código es obligatorio.',
+            'codigo_estudiante.digits'   => 'El código debe tener exactamente 9 dígitos.',
         ]);
 
-        Estudiante::create($request->only('nombre', 'email', 'codigo_estudiante'));
+        $materia = Materia::where('nrc', $nrc)
+                          ->where('profesor_id', Auth::id())
+                          ->firstOrFail();
 
-        return redirect()->route('profesor.estudiantes.index')
-            ->with('success', 'Estudiante agregado correctamente.');
-    }
+        // Verificar si el estudiante ya existe
+        $existente = Estudiante::where('email', $request->email)
+                               ->orWhere('codigo_estudiante', $request->codigo_estudiante)
+                               ->first();
 
-    /**
-     * Mostrar formulario de importación
-     */
-    public function showImport()
-    {
-        return view('profesor.estudiantes.import');
-    }
+        if ($existente) {
+            if ($existente->estaEnMateria($nrc)) {
+                return back()->withInput()
+                    ->with('error', "El estudiante {$existente->nombre} ya está registrado en esta materia.");
+            }
 
-    /**
-     * Mostrar formulario de edición
-     */
-    public function edit(Estudiante $estudiante)
-    {
-        return view('profesor.estudiantes.edit', compact('estudiante'));
-    }
+            if ($existente->estaEnOtraMateria($nrc)) {
+                return back()->withInput()
+                    ->with('info', "El estudiante {$existente->nombre} (código: {$existente->codigo_estudiante}) ya está registrado en otra materia. ¿Deseas agregarlo también a esta materia?")
+                    ->with('estudiante_existente_id', $existente->id)
+                    ->with('nrc', $nrc);
+            }
 
-    /**
-     * Actualizar estudiante
-     */
-    public function update(Request $request, Estudiante $estudiante)
-    {
-        $request->validate([
-            'nombre'            => ['required', 'string', 'max:255'],
-            'email'             => ['required', 'email', 'max:255', 'unique:estudiantes,email,' . $estudiante->id],
-            'codigo_estudiante' => ['required', 'digits:9', 'unique:estudiantes,codigo_estudiante,' . $estudiante->id],
-        ], [
-            'nombre.required'               => 'El nombre es obligatorio.',
-            'email.required'                => 'El email es obligatorio.',
-            'email.email'                   => 'El email no tiene un formato válido.',
-            'email.unique'                  => 'Ya existe un estudiante con ese email.',
-            'codigo_estudiante.required'    => 'El código es obligatorio.',
-            'codigo_estudiante.digits'      => 'El código debe ser de 9 dígitos.',
-            'codigo_estudiante.unique'      => 'Ya existe un estudiante con ese código.',
+            // Vincular a materia_estudiante
+            $existente->materias()->attach($nrc, [
+                'profesor_id' => Auth::id(),
+                'status'      => 'activo',
+            ]);
+
+            // También vincular en alumno_materia si tiene user
+            $userAlumno = User::where('email', $existente->email)->first();
+            if ($userAlumno) {
+                $this->vincularAlumnoMateria($userAlumno, $nrc, $existente->codigo_estudiante);
+            }
+
+            return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+                ->with('success', "Estudiante {$existente->nombre} agregado a la materia correctamente.");
+        }
+
+        // Nuevo estudiante — generar clave única
+        $claveUnica = Estudiante::generarClaveUnica();
+
+        $estudiante = Estudiante::create([
+            'nombre'            => $request->nombre,
+            'email'             => $request->email,
+            'codigo_estudiante' => $request->codigo_estudiante,
+            'clave_unica'       => $claveUnica,
         ]);
 
-        $estudiante->update($request->only('nombre', 'email', 'codigo_estudiante'));
+        // Crear usuario con rol alumno si no existe
+        $userAlumno = User::firstOrCreate(
+            ['email' => $request->email],
+            [
+                'name'     => $request->nombre,
+                'password' => Hash::make(Str::random(16)), // password random, no se usa
+                'role'     => 'alumno',
+            ]
+        );
 
-        return redirect()->route('profesor.estudiantes.index')
-            ->with('success', 'Estudiante actualizado correctamente.');
-}
+        // Vincular en materia_estudiante
+        $estudiante->materias()->attach($nrc, [
+            'profesor_id' => Auth::id(),
+            'status'      => 'activo',
+        ]);
+
+        // Vincular en alumno_materia (sistema existente)
+        $this->vincularAlumnoMateria($userAlumno, $nrc, $request->codigo_estudiante, $claveUnica);
+
+        return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+            ->with('success', "Estudiante {$estudiante->nombre} registrado correctamente.")
+            ->with('clave_generada', $claveUnica)
+            ->with('nombre_alumno', $estudiante->nombre);
+    }
 
     /**
-     * Procesar el archivo Excel/CSV importado
+     * Vincular alumno en alumno_materia (sistema existente del proyecto)
+     * Genera claves únicas verificando contra la BD para evitar duplicados
+     */
+    private function vincularAlumnoMateria(User $user, string $nrc, string $codigoEstudiante, string $claveAsistencia = null): void
+    {
+        $yaVinculado = $user->materias()->where('materia_nrc', $nrc)->exists();
+
+        if (!$yaVinculado) {
+            // clave_unica en alumno_materia tiene índice UNIQUE — generar una nueva
+            do {
+                $claveUnicaMateria = strtoupper(Str::random(10));
+            } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                ->where('clave_unica', $claveUnicaMateria)->exists());
+
+            // clave_asistencia también tiene índice UNIQUE
+            do {
+                $claveAsistenciaFinal = strtoupper(Str::random(10));
+            } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                ->where('clave_asistencia', $claveAsistenciaFinal)->exists());
+
+            $user->materias()->attach($nrc, [
+                'clave_unica'      => $claveUnicaMateria,
+                'clave_asistencia' => $claveAsistencia ?? $claveAsistenciaFinal,
+                'status'           => 'activo',
+            ]);
+        }
+    }
+
+    /**
+     * Confirmar agregar estudiante existente a esta materia
+     */
+    public function agregarExistente(Request $request)
+    {
+        $nrc          = $request->input('nrc');
+        $estudianteId = $request->input('estudiante_id');
+
+        $materia    = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
+        $estudiante = Estudiante::findOrFail($estudianteId);
+
+        if (!$estudiante->estaEnMateria($nrc)) {
+            $estudiante->materias()->attach($nrc, [
+                'profesor_id' => Auth::id(),
+                'status'      => 'activo',
+            ]);
+
+            $userAlumno = User::where('email', $estudiante->email)->first();
+            if ($userAlumno) {
+                $this->vincularAlumnoMateria($userAlumno, $nrc, $estudiante->codigo_estudiante);
+            }
+        }
+
+        return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+            ->with('success', "Estudiante {$estudiante->nombre} agregado a esta materia.");
+    }
+
+    /**
+     * Formulario de importación
+     */
+    public function showImport(Request $request)
+    {
+        $nrc     = $request->query('nrc');
+        $materia = null;
+
+        if ($nrc) {
+            $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
+        }
+
+        return view('profesor.estudiantes.import', compact('materia', 'nrc'));
+    }
+
+    /**
+     * Procesar archivo Excel/CSV
      */
     public function import(Request $request)
     {
+        $nrc = $request->input('nrc');
+
         $request->validate([
             'archivo' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
-        ], [
-            'archivo.required' => 'Debes seleccionar un archivo.',
-            'archivo.mimes'    => 'El archivo debe ser .xlsx, .xls o .csv.',
-            'archivo.max'      => 'El archivo no debe superar los 5MB.',
+            'nrc'     => ['required', 'string'],
         ]);
 
+        $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
+
         try {
-            $import = new EstudiantesImport();
+            $import = new EstudiantesImport($nrc);
             Excel::import($import, $request->file('archivo'));
 
-            $duplicados  = $import->getDuplicados();
-            $importados  = $import->getImportados();
+            $duplicados      = $import->getDuplicados();
+            $yaEnOtraMateria = $import->getYaEnOtraMateria();
+            $importados      = $import->getImportados();
 
-            // Caso 1: Solo duplicados, nada nuevo
             if ($importados === 0 && count($duplicados) > 0) {
-                return redirect()->route('profesor.estudiantes.import')
-                    ->with('warning', 'No se agregó ningún estudiante. Todos los registros ya existen.')
+                return redirect()->route('profesor.estudiantes.import', ['nrc' => $nrc])
+                    ->with('warning', 'No se agregó ningún estudiante. Todos ya están en esta materia.')
                     ->with('duplicados', $duplicados);
             }
 
-            // Caso 2: Algunos importados y algunos duplicados
-            if ($importados > 0 && count($duplicados) > 0) {
-                return redirect()->route('profesor.estudiantes.index')
-                    ->with('warning', "Se importaron {$importados} estudiante(s). " . count($duplicados) . " registro(s) ya existían y fueron omitidos.")
-                    ->with('duplicados', $duplicados);
+            $msg = "Se importaron {$importados} estudiante(s) correctamente.";
+
+            if (count($duplicados) > 0) {
+                return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+                    ->with('warning', $msg . ' ' . count($duplicados) . ' ya existían en esta materia.')
+                    ->with('duplicados', $duplicados)
+                    ->with('yaEnOtraMateria', $yaEnOtraMateria);
             }
 
-            // Caso 3: Todo importado sin duplicados
-            return redirect()->route('profesor.estudiantes.index')
-                ->with('success', "Se importaron {$importados} estudiante(s) correctamente.");
-
-
-
-
-        } 
-        catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-    $errores = [];
-    foreach ($e->failures() as $failure) {
-        $errores[] = "Fila {$failure->row()}: " . implode(', ', $failure->errors());
-    }
-    return redirect()->route('profesor.estudiantes.import')
-        ->with('warning', 'Algunos registros no se importaron por datos inválidos o incompletos.')
-        ->with('errores', $errores);
-
+            return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+                ->with('success', $msg)
+                ->with('yaEnOtraMateria', $yaEnOtraMateria);
 
         } catch (\Exception $e) {
-            return redirect()->route('profesor.estudiantes.import')
+            return redirect()->route('profesor.estudiantes.import', ['nrc' => $nrc])
                 ->with('error', 'Error al procesar el archivo: ' . $e->getMessage());
         }
     }
@@ -153,9 +271,9 @@ class EstudianteController extends Controller
     /**
      * Ver detalle de un estudiante
      */
-    public function show(Estudiante $estudiante)
+    public function show(Estudiante $estudiante, Request $request)
     {
-        $estudiante->load('grupos');
-        return view('profesor.estudiantes.show', compact('estudiante'));
+        $nrc = $request->query('nrc');
+        return view('profesor.estudiantes.show', compact('estudiante', 'nrc'));
     }
 }

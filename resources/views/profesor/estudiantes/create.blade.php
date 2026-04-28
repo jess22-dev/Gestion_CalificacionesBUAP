@@ -25,7 +25,7 @@
         {{-- Alerta de estudiante en otra materia --}}
         @if(session('info'))
             <div class="mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-800 rounded-xl">
-                <p class="font-semibold mb-3">ℹ️ {{ session('info') }}</p>
+                <p class="font-semibold mb-3"> {{ session('info') }}</p>
                 <form action="{{ route('profesor.estudiantes.agregar.existente') }}" method="POST" class="flex gap-3">
                     @csrf
                     <input type="hidden" name="nrc" value="{{ session('nrc') ?? $nrc }}">

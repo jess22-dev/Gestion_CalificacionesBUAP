@@ -234,7 +234,10 @@ require __DIR__.'/auth.php';
 require __DIR__.'/estudiantes.php';
 
 // 9. API Asistencia
-Route::post('/asistencia/iniciar',   [AsistenciaController::class, 'iniciar']);
-Route::post('/asistencia/detener',   [AsistenciaController::class, 'detener']);
-Route::post('/asistencia/qr',        [AsistenciaController::class, 'registrarQR']);
-Route::post('/asistencia/registrar', [AsistenciaController::class, 'registrar']);
+Route::post('/asistencia/iniciar',        [AsistenciaController::class, 'iniciar']);
+Route::post('/asistencia/detener',        [AsistenciaController::class, 'detener']);
+Route::post('/asistencia/qr',             [AsistenciaController::class, 'registrarQR']);
+Route::post('/asistencia/registrar',      [AsistenciaController::class, 'registrar']);
+Route::get('/asistencia/estado',          [AsistenciaController::class, 'estadoActual']);
+Route::post('/asistencia/cambiar-estatus',[AsistenciaController::class, 'cambiarEstatus']);
+Route::post('/asistencia/todos-presentes',[AsistenciaController::class, 'todosPresentes']);

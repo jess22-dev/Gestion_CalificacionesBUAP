@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class EstudianteController extends Controller
@@ -151,15 +152,28 @@ class EstudianteController extends Controller
 
     /**
      * Vincular alumno en alumno_materia (sistema existente del proyecto)
+     * Genera claves únicas verificando contra la BD para evitar duplicados
      */
     private function vincularAlumnoMateria(User $user, string $nrc, string $codigoEstudiante, string $claveAsistencia = null): void
     {
         $yaVinculado = $user->materias()->where('materia_nrc', $nrc)->exists();
 
         if (!$yaVinculado) {
+            // clave_unica en alumno_materia tiene índice UNIQUE — generar una nueva
+            do {
+                $claveUnicaMateria = strtoupper(Str::random(10));
+            } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                ->where('clave_unica', $claveUnicaMateria)->exists());
+
+            // clave_asistencia también tiene índice UNIQUE
+            do {
+                $claveAsistenciaFinal = strtoupper(Str::random(10));
+            } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
+                ->where('clave_asistencia', $claveAsistenciaFinal)->exists());
+
             $user->materias()->attach($nrc, [
-                'clave_unica'      => $codigoEstudiante,
-                'clave_asistencia' => $claveAsistencia ?? Estudiante::generarClaveUnica(),
+                'clave_unica'      => $claveUnicaMateria,
+                'clave_asistencia' => $claveAsistencia ?? $claveAsistenciaFinal,
                 'status'           => 'activo',
             ]);
         }

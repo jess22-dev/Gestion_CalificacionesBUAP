@@ -13,6 +13,7 @@ class AsistenciaDetalle extends Model
         'alumno_id',
         'clave_unica',
         'asistio',
+        'estatus',
         'hora_registro',
     ];
 
@@ -26,9 +27,6 @@ class AsistenciaDetalle extends Model
         return $this->belongsTo(Asistencia::class);
     }
 
-    /**
-     * Relación con Estudiante (no con User)
-     */
     public function alumno()
     {
         return $this->belongsTo(Estudiante::class, 'alumno_id');

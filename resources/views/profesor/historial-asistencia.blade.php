@@ -16,7 +16,7 @@
                 </a>
             </div>
 
-            @if($sesiones->isEmpty())
+            @if(empty($diasUnicos) || count($diasUnicos) === 0)
                 <div class="bg-white rounded-2xl shadow-xl p-12 text-center border border-gray-100">
                     <h3 class="text-xl font-bold text-gray-600 mb-2">Sin sesiones registradas</h3>
                     <p class="text-gray-400 text-sm">Aún no se ha tomado ninguna asistencia en esta materia.</p>
@@ -30,7 +30,7 @@
                 {{-- Resumen general --}}
                 <div class="grid grid-cols-3 gap-4 mb-6">
                     <div class="bg-white rounded-2xl p-5 shadow border border-gray-100 text-center">
-                        <p class="text-3xl font-black text-[#002d62]">{{ $sesiones->count() }}</p>
+                        <p class="text-3xl font-black text-[#002d62]">{{ count($diasUnicos) }}</p>
                         <p class="text-xs font-bold text-gray-400 uppercase mt-1">Sesiones</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 shadow border border-gray-100 text-center">
@@ -40,7 +40,7 @@
                     <div class="bg-white rounded-2xl p-5 shadow border border-gray-100 text-center">
                         @php
                             $totalAsistencias = collect($registros)->sum(fn($r) => collect($r)->filter()->count());
-                            $totalPosible     = $sesiones->count() * $estudiantes->count();
+                            $totalPosible     = count($diasUnicos) * $estudiantes->count();
                             $porcentaje       = $totalPosible > 0 ? round(($totalAsistencias / $totalPosible) * 100) : 0;
                         @endphp
                         <p class="text-3xl font-black text-[#002d62]">{{ $porcentaje }}%</p>
@@ -63,14 +63,14 @@
                                     <th class="p-4 text-left text-xs font-black text-gray-600 uppercase sticky left-0 bg-gray-50 z-10 min-w-[200px] border-r border-gray-200">
                                         Alumno
                                     </th>
-                                    {{-- Columnas por sesión --}}
-                                    @foreach($sesiones as $sesion)
+                                    {{-- Columnas por día único --}}
+                                    @foreach($diasUnicos as $dia)
                                         <th class="p-3 text-center text-xs font-bold text-gray-500 min-w-[80px] border-r border-gray-100">
                                             <div class="text-[#002d62] font-black">
-                                                {{ \Carbon\Carbon::parse($sesion->inicia_en)->format('d/m/Y') }}
+                                                {{ $dia->format('d/m/Y') }}
                                             </div>
                                             <div class="text-gray-400 font-normal text-[10px]">
-                                                {{ \Carbon\Carbon::parse($sesion->inicia_en)->locale('es')->isoFormat('ddd') }}
+                                                {{ $dia->locale('es')->isoFormat('ddd') }}
                                             </div>
                                         </th>
                                     @endforeach
@@ -92,10 +92,11 @@
                                             <p class="text-blue-600 font-mono text-xs">{{ $estudiante->codigo_estudiante }}</p>
                                         </td>
 
-                                        {{-- Una celda por sesión --}}
-                                        @foreach($sesiones as $sesion)
+                                        {{-- Una celda por día único --}}
+                                        @foreach($diasUnicos as $dia)
                                             @php
-                                                $asistio = $registros[$sesion->id][$estudiante->id] ?? false;
+                                                $fechaDia = $dia->format('Y-m-d');
+                                                $asistio  = $registros[$fechaDia][$estudiante->id] ?? false;
                                                 if ($asistio) $asistenciasAlumno++;
                                             @endphp
                                             <td class="p-3 text-center border-r border-gray-100">
@@ -120,12 +121,12 @@
                                         {{-- Total del alumno --}}
                                         <td class="p-3 text-center bg-gray-50">
                                             @php
-                                                $pct = $sesiones->count() > 0
-                                                    ? round(($asistenciasAlumno / $sesiones->count()) * 100)
+                                                $pct = count($diasUnicos) > 0
+                                                    ? round(($asistenciasAlumno / count($diasUnicos)) * 100)
                                                     : 0;
                                             @endphp
                                             <div class="font-black text-sm {{ $pct >= 75 ? 'text-green-600' : ($pct >= 50 ? 'text-yellow-600' : 'text-red-500') }}">
-                                                {{ $asistenciasAlumno }}/{{ $sesiones->count() }}
+                                                {{ $asistenciasAlumno }}/{{ count($diasUnicos) }}
                                             </div>
                                             <div class="text-[10px] font-bold {{ $pct >= 75 ? 'text-green-500' : ($pct >= 50 ? 'text-yellow-500' : 'text-red-400') }}">
                                                 {{ $pct }}%
@@ -139,12 +140,13 @@
                                     <td class="p-4 text-xs uppercase tracking-wide sticky left-0 bg-[#002d62] z-10 border-r border-blue-700">
                                         Presentes
                                     </td>
-                                    @foreach($sesiones as $sesion)
+                                    @foreach($diasUnicos as $dia)
                                         @php
-                                            $presentesSesion = collect($registros[$sesion->id] ?? [])->filter()->count();
+                                            $fechaDia = $dia->format('Y-m-d');
+                                            $presentesDia = collect($registros[$fechaDia] ?? [])->filter()->count();
                                         @endphp
                                         <td class="p-3 text-center text-sm border-r border-blue-700">
-                                            {{ $presentesSesion }}/{{ $estudiantes->count() }}
+                                            {{ $presentesDia }}/{{ $estudiantes->count() }}
                                         </td>
                                     @endforeach
                                     <td class="p-3 text-center text-sm bg-[#001d3d]">

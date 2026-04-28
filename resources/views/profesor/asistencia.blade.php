@@ -30,7 +30,7 @@
             <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 mb-6">
                 <h3 class="text-xl font-bold text-[#002d62] mb-5"> Control de Asistencia</h3>
 
-                <div class="grid md:grid-cols-3 gap-6 mb-4">
+                <div class="grid md:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Duración</label>
                         <select id="duracion" class="w-full rounded-xl border-gray-200 text-sm">
@@ -41,18 +41,25 @@
                         </select>
                     </div>
                     <div class="flex items-end gap-2">
-                        <button id="btnIniciar" class="bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-green-700 transition text-sm">
+                        <button id="btnIniciar" class="bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-green-700 transition text-sm">
                             Iniciar 
                         </button>
-                        <button id="btnDetener" class="bg-red-500 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-600 transition text-sm">
+                        <button id="btnDetener" class="bg-red-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-red-600 transition text-sm">
                             Detener 
                         </button>
                     </div>
                     <div class="flex items-end">
                         <button id="btnQR" disabled
-                            class="w-full bg-gray-300 text-gray-500 px-5 py-2.5 rounded-xl font-bold cursor-not-allowed transition text-sm"
+                            class="w-full bg-gray-300 text-gray-500 px-4 py-2.5 rounded-xl font-bold cursor-not-allowed transition text-sm"
                             title="Primero inicia la asistencia">
                             Escanear QR 
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="btnTodos"
+                            onclick="todosPresentes()"
+                            class="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition text-sm">
+                             Todos vinieron
                         </button>
                     </div>
                 </div>
@@ -65,6 +72,15 @@
 
                 <div id="qr_resultado" class="hidden p-3 rounded-xl text-sm font-bold mt-2"></div>
                 <div id="reader" class="hidden mt-4" style="width:300px;"></div>
+
+                {{-- Leyenda de estatus --}}
+                <div class="mt-4 flex flex-wrap gap-3 text-xs font-bold">
+                    <span class="flex items-center gap-1"><span class="w-5 h-5 rounded-full bg-red-200 border-2 border-red-400 inline-block"></span> Ausente</span>
+                    <span class="flex items-center gap-1"><span class="w-5 h-5 rounded-full bg-green-400 border-2 border-green-600 inline-block"></span> Presente</span>
+                    <span class="flex items-center gap-1"><span class="w-5 h-5 rounded-full bg-yellow-400 border-2 border-yellow-600 inline-block"></span> Retardo</span>
+                    <span class="flex items-center gap-1"><span class="w-5 h-5 rounded-full bg-blue-400 border-2 border-blue-600 inline-block"></span> Justificado</span>
+                    <span class="text-gray-400 italic">← Click en el círculo para cambiar</span>
+                </div>
             </div>
 
             {{-- LISTA DE ASISTENCIA --}}
@@ -74,9 +90,15 @@
                         <h3 class="text-xl font-bold text-[#002d62]">Lista de Asistencia</h3>
                         <p class="text-gray-400 text-sm">Fecha: {{ date('d/m/Y') }} — {{ $alumnos->count() }} alumno(s)</p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-xs font-black bg-green-100 text-green-700 px-3 py-1 rounded-full">
                             <span id="presentes_count">0</span> presentes
+                        </span>
+                        <span class="text-xs font-black bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
+                            <span id="retardos_count">0</span> retardos
+                        </span>
+                        <span class="text-xs font-black bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                            <span id="justificados_count">0</span> justificados
                         </span>
                         <span class="text-xs font-black bg-red-100 text-red-600 px-3 py-1 rounded-full">
                             <span id="ausentes_count">{{ $alumnos->count() }}</span> ausentes
@@ -90,11 +112,11 @@
                             <tr>
                                 <th class="p-4 text-left">Código</th>
                                 <th class="p-4 text-left">Nombre del Alumno</th>
-                                <th class="p-4 text-center">Asistencia</th>
+                                <th class="p-4 text-center">Estatus</th>
                                 <th class="p-4 text-center">Hora</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-gray-100" id="tabla_body">
                             @forelse($alumnos as $alumno)
                                 <tr class="hover:bg-gray-50 transition" id="fila_{{ $alumno->codigo_estudiante }}">
                                     <td class="p-4 font-mono text-blue-700 font-bold text-xs">
@@ -104,10 +126,16 @@
                                         {{ $alumno->nombre }}
                                     </td>
                                     <td class="p-4 text-center">
-                                        <span id="status_{{ $alumno->codigo_estudiante }}"
-                                            class="inline-block w-6 h-6 rounded-full bg-red-200 border-2 border-red-400"
-                                            title="Ausente">
-                                        </span>
+                                        {{-- Círculo clicable — cicla entre 4 estados --}}
+                                        <button
+                                            id="status_{{ $alumno->codigo_estudiante }}"
+                                            data-alumno-id="{{ $alumno->id }}"
+                                            data-codigo="{{ $alumno->codigo_estudiante }}"
+                                            data-estatus="ausente"
+                                            onclick="ciclarEstatus(this)"
+                                            class="w-7 h-7 rounded-full bg-red-200 border-2 border-red-400 inline-block cursor-pointer hover:scale-110 transition-transform"
+                                            title="Ausente — Click para cambiar">
+                                        </button>
                                     </td>
                                     <td class="p-4 text-center text-xs text-gray-400" id="hora_{{ $alumno->codigo_estudiante }}">
                                         —
@@ -145,7 +173,6 @@
 
         let intervalo        = null;
         let asistenciaActiva = false;
-        let presentesCount   = 0;
         const materia_nrc    = "{{ $materia->nrc }}";
         const totalAlumnos   = {{ $alumnos->count() }};
         const csrf           = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -156,7 +183,31 @@
             'X-CSRF-TOKEN': csrf
         };
 
-        // Restaurar si ya hay asistencia activa
+        // ─── CONFIGURACIÓN DE ESTATUS ────────────────────────────
+        const ESTATUS = {
+            ausente:     { next: 'presente',    cls: 'bg-red-200 border-red-400',    title: 'Ausente' },
+            presente:    { next: 'retardo',     cls: 'bg-green-400 border-green-600', title: 'Presente' },
+            retardo:     { next: 'justificado', cls: 'bg-yellow-400 border-yellow-600', title: 'Retardo' },
+            justificado: { next: 'ausente',     cls: 'bg-blue-400 border-blue-600',  title: 'Justificado' },
+        };
+
+        // ─── RESTAURAR ESTADO AL CARGAR ─────────────────────────
+        fetch(`/asistencia/estado?materia_nrc=${materia_nrc}`, {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.detalles && data.detalles.length > 0) {
+                data.detalles.forEach(d => {
+                    if (d.codigo && d.estatus && d.estatus !== 'ausente') {
+                        aplicarEstatus(d.codigo, d.estatus, d.hora ?? '');
+                    }
+                });
+                actualizarContadores();
+            }
+        });
+
+        // Restaurar contador si hay asistencia activa
         @if($asistenciaActiva)
         (function () {
             const fin = new Date("{{ $asistenciaActiva->termina_en->toIso8601String() }}");
@@ -167,7 +218,7 @@
         })();
         @endif
 
-        // INICIAR
+        // ─── INICIAR ────────────────────────────────────────────
         document.getElementById('btnIniciar').addEventListener('click', function () {
             const duracion = document.getElementById('duracion').value;
             fetch('/asistencia/iniciar', {
@@ -179,18 +230,45 @@
             .catch(e => alert(' ' + e.message));
         });
 
-        // DETENER
+        // ─── DETENER ────────────────────────────────────────────
         document.getElementById('btnDetener').addEventListener('click', function () {
             fetch('/asistencia/detener', {
                 method: 'POST', headers,
                 body: JSON.stringify({ materia_nrc })
             })
             .then(async res => { const d = await res.json(); if (!res.ok) throw new Error(d.error); return d; })
-            .then(() => { desactivarUI(); if (intervalo) clearInterval(intervalo); document.getElementById('contador').innerHTML = ' Asistencia detenida'; })
+            .then(() => {
+                desactivarUI();
+                if (intervalo) clearInterval(intervalo);
+                document.getElementById('contador').innerHTML = 'Asistencia detenida';
+            })
             .catch(e => alert(' ' + e.message));
         });
 
-        // ESCANEAR QR
+        // ─── TODOS PRESENTES ────────────────────────────────────
+        window.todosPresentes = function () {
+            if (!confirm('¿Marcar a TODOS los alumnos como presentes?')) return;
+
+            fetch('/asistencia/todos-presentes', {
+                method: 'POST', headers,
+                body: JSON.stringify({ materia_nrc })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Marcar visualmente a todos
+                    document.querySelectorAll('[id^="status_"]').forEach(btn => {
+                        const codigo = btn.dataset.codigo;
+                        aplicarEstatus(codigo, 'presente', new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+                    });
+                    actualizarContadores();
+                } else {
+                    alert('❌ ' + (data.error ?? 'Error'));
+                }
+            });
+        };
+
+        // ─── ESCANEAR QR ────────────────────────────────────────
         document.getElementById('btnQR').addEventListener('click', function () {
             if (!asistenciaActiva) return;
             const readerDiv = document.getElementById('reader');
@@ -212,41 +290,91 @@
                     .then(data => {
                         if (data.success) {
                             resultado.className = 'p-3 rounded-xl text-sm font-bold bg-green-100 text-green-800 mt-2';
-                            resultado.innerHTML = ` Asistencia registrada: ${data.nombre ?? ''}`;
-                            marcarPresente(data.codigo);
+                            resultado.innerHTML = ` Presente: ${data.nombre ?? ''}`;
+                            aplicarEstatus(data.codigo, 'presente',
+                                new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+                            actualizarContadores();
                         } else {
                             resultado.className = 'p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700 mt-2';
                             resultado.innerHTML = ` ${data.error ?? 'Error desconocido'}`;
                         }
-                        resultado.classList.remove('hidden');
-                    })
-                    .catch(() => {
-                        resultado.className = 'p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700 mt-2';
-                        resultado.innerHTML = ' Error al registrar asistencia';
                         resultado.classList.remove('hidden');
                     });
                 });
             }).catch(() => alert('No se pudo acceder a la cámara'));
         });
 
-        // Marcar presente en la tabla 
-        function marcarPresente(codigo) {
-            const statusEl = document.getElementById('status_' + codigo);
-            const horaEl   = document.getElementById('hora_'   + codigo);
-            const filaEl   = document.getElementById('fila_'   + codigo);
-            if (statusEl) { statusEl.className = 'inline-block w-6 h-6 rounded-full bg-green-400 border-2 border-green-600'; statusEl.title = 'Presente'; }
-            if (horaEl)   { horaEl.textContent = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }); }
-            if (filaEl)   { filaEl.classList.add('bg-green-50'); }
-            presentesCount++;
-            document.getElementById('presentes_count').textContent = presentesCount;
-            document.getElementById('ausentes_count').textContent  = totalAlumnos - presentesCount;
+        // ─── CICLAR ESTATUS AL HACER CLICK ──────────────────────
+        window.ciclarEstatus = function(btn) {
+            const actual  = btn.dataset.estatus;
+            const sig     = ESTATUS[actual].next;
+            const alumnoId = btn.dataset.alumnoId;
+            const codigo   = btn.dataset.codigo;
+
+            fetch('/asistencia/cambiar-estatus', {
+                method: 'POST', headers,
+                body: JSON.stringify({ materia_nrc, alumno_id: parseInt(alumnoId), estatus: sig })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const hora = sig !== 'ausente'
+                        ? new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                        : '—';
+                    aplicarEstatus(codigo, sig, hora);
+                    actualizarContadores();
+                } else {
+                    alert(' ' + (data.error ?? 'Error'));
+                }
+            });
+        };
+
+        // ─── APLICAR ESTATUS VISUALMENTE ────────────────────────
+        function aplicarEstatus(codigo, estatus, hora) {
+            const btn   = document.getElementById('status_' + codigo);
+            const horaEl = document.getElementById('hora_' + codigo);
+            const filaEl = document.getElementById('fila_' + codigo);
+
+            if (!btn) return;
+
+            const cfg = ESTATUS[estatus];
+            if (!cfg) return;
+
+            // Limpiar clases de color anteriores
+            btn.className = `w-7 h-7 rounded-full border-2 inline-block cursor-pointer hover:scale-110 transition-transform ${cfg.cls}`;
+            btn.dataset.estatus = estatus;
+            btn.title = cfg.title;
+
+            if (horaEl) horaEl.textContent = hora || '—';
+            if (filaEl) {
+                filaEl.className = filaEl.className.replace(/bg-\w+-\d+/g, '').trim();
+                const bgMap = { presente: 'bg-green-50', retardo: 'bg-yellow-50', justificado: 'bg-blue-50', ausente: '' };
+                if (bgMap[estatus]) filaEl.classList.add(bgMap[estatus]);
+            }
         }
 
+        // ─── ACTUALIZAR CONTADORES ───────────────────────────────
+        function actualizarContadores() {
+            let presentes = 0, retardos = 0, justificados = 0, ausentes = 0;
+            document.querySelectorAll('[id^="status_"]').forEach(btn => {
+                const est = btn.dataset.estatus;
+                if (est === 'presente')    presentes++;
+                else if (est === 'retardo')     retardos++;
+                else if (est === 'justificado') justificados++;
+                else ausentes++;
+            });
+            document.getElementById('presentes_count').textContent   = presentes;
+            document.getElementById('retardos_count').textContent    = retardos;
+            document.getElementById('justificados_count').textContent = justificados;
+            document.getElementById('ausentes_count').textContent    = ausentes;
+        }
+
+        // ─── ACTIVAR / DESACTIVAR UI ────────────────────────────
         function activarUI() {
             asistenciaActiva = true;
             const b = document.getElementById('btnQR');
             b.disabled = false;
-            b.className = 'w-full bg-[#002d62] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1e4b8a] transition text-sm cursor-pointer';
+            b.className = 'w-full bg-[#002d62] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#1e4b8a] transition text-sm cursor-pointer';
             b.removeAttribute('title');
             document.getElementById('estado_asistencia').classList.remove('hidden');
         }
@@ -255,11 +383,12 @@
             asistenciaActiva = false;
             const b = document.getElementById('btnQR');
             b.disabled = true;
-            b.className = 'w-full bg-gray-300 text-gray-500 px-5 py-2.5 rounded-xl font-bold cursor-not-allowed transition text-sm';
+            b.className = 'w-full bg-gray-300 text-gray-500 px-4 py-2.5 rounded-xl font-bold cursor-not-allowed transition text-sm';
             b.title = 'Primero inicia la asistencia';
             document.getElementById('estado_asistencia').classList.add('hidden');
         }
 
+        // ─── CONTADOR ───────────────────────────────────────────
         function iniciarContador(fin) {
             if (intervalo) clearInterval(intervalo);
             intervalo = setInterval(() => {

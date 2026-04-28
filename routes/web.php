@@ -199,6 +199,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Historial de asistencias
         Route::get('/grupo/{nrc}/historial', [MateriaController::class, 'historial'])->name('profesor.historial');
+        Route::post('/grupo/{nrc}/historial/editar', [AsistenciaController::class, 'editarHistorial'])->name('profesor.historial.editar');
 
         // Calificaciones por actividad
         Route::get('/grupo/{nrc}/actividades/{actividad}/detalle', [ActividadController::class, 'detalle'])->name('profesor.actividades.detalle');

@@ -275,4 +275,44 @@ class AsistenciaController extends Controller
 
         return response()->json(['success' => true, 'nombre' => $estudiante->nombre]);
     }
+
+    /**
+     * Editar estatus de asistencia desde el historial
+     * Solo 3 estados: presente, ausente, justificado
+     */
+    public function editarHistorial(Request $request, $nrc)
+    {
+        $request->validate([
+            'alumno_id' => 'required|integer',
+            'fecha'     => 'required|date',
+            'estatus'   => 'required|in:presente,ausente,justificado',
+        ]);
+
+        // Buscar la sesión de asistencia de ese día
+        $sesion = Asistencia::where('materia_nrc', $nrc)
+            ->whereDate('inicia_en', $request->fecha)
+            ->latest()
+            ->first();
+
+        if (!$sesion) {
+            return response()->json(['error' => 'No hay sesión registrada para esa fecha.'], 404);
+        }
+
+        $estudiante = Estudiante::find($request->alumno_id);
+
+        AsistenciaDetalle::updateOrCreate(
+            [
+                'asistencia_id' => $sesion->id,
+                'alumno_id'     => $request->alumno_id,
+            ],
+            [
+                'clave_unica'   => $estudiante?->codigo_estudiante,
+                'asistio'       => $request->estatus === 'presente',
+                'estatus'       => $request->estatus,
+                'hora_registro' => $request->estatus !== 'ausente' ? now() : null,
+            ]
+        );
+
+        return response()->json(['success' => true, 'estatus' => $request->estatus]);
+    }
 }

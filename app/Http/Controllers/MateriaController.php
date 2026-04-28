@@ -82,8 +82,8 @@ class MateriaController extends Controller
     }
 
     /**
-     * Historial de asistencias — tabla cuadrícula agrupada por DÍA
-     * Filas: alumnos | Columnas: días únicos (sin repetir, sin domingos)
+     * Historial de asistencias — tabla cuadrícula
+     * Filas: alumnos | Columnas: fechas de sesiones
      */
     public function historial($nrc)
     {
@@ -96,44 +96,39 @@ class MateriaController extends Controller
                                ->orderBy('nombre')
                                ->get();
 
-        // Todas las sesiones de la materia
         $sesiones = \App\Models\Asistencia::where('materia_nrc', $nrc)
                         ->orderBy('inicia_en', 'asc')
                         ->get();
 
-        // Agrupar sesiones por día (YYYY-MM-DD) — sin domingos
-        // Si hubo varias sesiones en el mismo día, se unifican en una sola columna
         $diasUnicos = collect();
-        $sesionesPorDia = []; // ['2026-04-27' => [sesion_id1, sesion_id2, ...]]
+        $sesionesPorDia = [];
 
         foreach ($sesiones as $sesion) {
             $fecha = \Carbon\Carbon::parse($sesion->inicia_en);
-
-            // Saltar domingos (0 = domingo en dayOfWeek)
             if ($fecha->dayOfWeek === 0) continue;
-
             $dia = $fecha->format('Y-m-d');
-
             if (!isset($sesionesPorDia[$dia])) {
                 $sesionesPorDia[$dia] = [];
                 $diasUnicos->push($fecha->startOfDay()->copy());
             }
-
             $sesionesPorDia[$dia][] = $sesion->id;
         }
 
-        // Para cada día, marcar si el alumno asistió en ALGUNA sesión de ese día
-        // Resultado: ['YYYY-MM-DD' => ['alumno_id' => true/false]]
+        // Resultado: ['YYYY-MM-DD' => ['alumno_id' => 'estatus']]
         $registros = [];
+        $prioridad = ['ausente' => 0, 'retardo' => 1, 'presente' => 2, 'justificado' => 3];
+
         foreach ($sesionesPorDia as $dia => $ids) {
             $registros[$dia] = [];
             foreach ($ids as $sesionId) {
                 $detalles = \App\Models\AsistenciaDetalle::where('asistencia_id', $sesionId)
-                                ->where('asistio', true)
-                                ->pluck('alumno_id')
-                                ->toArray();
-                foreach ($detalles as $alumnoId) {
-                    $registros[$dia][$alumnoId] = true;
+                                ->get(['alumno_id', 'estatus', 'asistio']);
+                foreach ($detalles as $detalle) {
+                    $nuevo = $detalle->estatus ?? ($detalle->asistio ? 'presente' : 'ausente');
+                    $actual = $registros[$dia][$detalle->alumno_id] ?? 'ausente';
+                    if (($prioridad[$nuevo] ?? 0) >= ($prioridad[$actual] ?? 0)) {
+                        $registros[$dia][$detalle->alumno_id] = $nuevo;
+                    }
                 }
             }
         }

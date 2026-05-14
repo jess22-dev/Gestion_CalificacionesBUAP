@@ -25,7 +25,7 @@
             {{-- Barra superior --}}
             <div class="mb-6 flex justify-between items-center">
                 <a href="{{ route('dashboard') }}" class="text-[#1e4b8a] font-bold hover:underline flex items-center">
-                    ← Volver al Dashboard
+                    ← Volver
                 </a>
                 <a href="{{ route('profesor.estudiantes.index', ['nrc' => $materia->nrc]) }}"
                    class="inline-flex items-center gap-2 bg-[#002d62] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#1e4b8a] transition shadow-lg">
@@ -153,7 +153,7 @@
                                 <div class="mt-4 flex justify-between items-center p-3 bg-gray-800 rounded-xl">
                                     <span class="text-sm font-black text-white">Total</span>
                                     <span class="font-black {{ $ponderacionTotal == 100 ? 'text-green-400' : 'text-yellow-400' }}">
-                                        {{ $ponderacionTotal }}% {{ $ponderacionTotal == 100 ? '' : '' }}
+                                        {{ $ponderacionTotal }}%
                                     </span>
                                 </div>
                             @endif
@@ -173,7 +173,7 @@
                     </div>
                     <a href="{{ route('profesor.asistencia', $materia->nrc) }}"
                        class="bg-[#002d62] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#1e4b8a] transition shadow-lg text-sm">
-                        Iniciar →
+                        Iniciar 
                     </a>
                 </div>
                 {{-- Ver Historial --}}
@@ -184,13 +184,33 @@
                     </div>
                     <a href="{{ route('profesor.historial', $materia->nrc) }}"
                        class="bg-[#1e4b8a] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#002d62] transition shadow-lg text-sm">
-                        Ver →
+                        Ver 
+                    </a>
+                </div>
+            </div>
+
+            {{-- NUEVO: ACCESO AL PUENTE INTELIGENTE DE ACTAS --}}
+            <div class="mt-6">
+                <div class="bg-gradient-to-r from-[#1e4b8a] to-[#002d62] p-8 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div class="flex items-center gap-5">
+                        <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                            <svg class="w-10 h-10 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black italic">Generador de Actas</h2>
+                            <p class="text-blue-100 text-sm">Valida datos y genera el acta final.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('profesor.actas.index',$materia->nrc) }}" 
+                       class="w-full md:w-auto bg-white text-[#002d62] px-8 py-4 rounded-2xl font-black text-center hover:bg-blue-50 transition-all transform hover:scale-105 shadow-xl">
+                        INGRESAR
                     </a>
                 </div>
             </div>
 
         </div>
     </div>
-
 
 </x-app-layout>

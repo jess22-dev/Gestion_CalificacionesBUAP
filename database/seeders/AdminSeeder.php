@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class AdminSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        User::create([
-    'name' => 'Administrador BUAP',
-    'email' => 'admin@buap.mx',
-    'password' => Hash::make('admin123'),
-    'role' => 'admin', // <--- Asegúrate de que esto esté aquí
-]);
+        \App\Models\User::create([
+            'name'     => 'Administrador',
+            'email'    => 'admin@buap.mx',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
+            'role'     => 'admin', 
+        ]);
     }
 }

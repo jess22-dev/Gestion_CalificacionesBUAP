@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ActasController;
 use App\Http\Controllers\ExcelController;
 use App\Http\Controllers\AlumnoController;
 use App\Http\Controllers\MateriaController;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\CalificacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -181,7 +183,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/grupo/{nrc}/actividades', [ActividadController::class, 'store'])->name('profesor.actividades.store');
         Route::delete('/grupo/{nrc}/actividades/{actividad}', [ActividadController::class, 'destroy'])->name('profesor.actividades.destroy');
 
-        // Asistencia — tomar lista
+        // Asistencia
         Route::get('/asistencia/{nrc}', function ($nrc) {
             $materia  = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
             $alumnos  = $materia->estudiantes()->wherePivot('status', 'activo')->get();
@@ -197,6 +199,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return back()->with('success', 'Lista de asistencia guardada correctamente.');
         })->name('asistencias.guardar');
 
+        // --- MÓDULO DE ACTAS (CORREGIDO) ---
+        Route::prefix('actas/{nrc}')->group(function () {
+            // 1. Vista principal
+            Route::get('/importar', [ActasController::class, 'index'])->name('profesor.actas.index');
+            
+            // 2. Procesar archivos
+            Route::post('/procesar', [ActasController::class, 'procesar'])->name('profesor.actas.procesar');
+            
+            // 3. Exportar Excel
+            Route::post('/exportar', [ActasController::class, 'exportar'])->name('profesor.actas.exportar');
+
+            // 4. Eliminar actividad (URL CORTA porque ya hereda el prefijo)
+            Route::delete('/eliminar-actividad/{actividad}', [ActasController::class, 'eliminarActividad'])
+                ->name('profesor.actas.eliminarActividad');
+
+            // 5. Eliminar TODO el acta (Opcional, por si quieres el botón de limpieza total)
+            Route::delete('/eliminar-todo', [ActasController::class, 'eliminar'])
+                ->name('profesor.actas.eliminar');
+        });
+         Route::post('/profesor/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])
+            ->name('profesor.actas.guardar_manual');
+
         // Historial de asistencias
         Route::get('/grupo/{nrc}/historial', [MateriaController::class, 'historial'])->name('profesor.historial');
 
@@ -204,7 +228,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/grupo/{nrc}/actividades/{actividad}/detalle', [ActividadController::class, 'detalle'])->name('profesor.actividades.detalle');
         Route::post('/grupo/{nrc}/actividades/{actividad}/calificar', [ActividadController::class, 'calificar'])->name('profesor.actividades.calificar');
     });
-
     // 5. SECCIÓN ALUMNO
     Route::middleware(['can:alumno'])->prefix('alumno')->group(function () {
         Route::get('/dashboard', [AlumnoController::class, 'index'])->name('alumno.dashboard');

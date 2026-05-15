@@ -30,19 +30,19 @@ class Materia extends Model
     }
 
     // Estudiantes del nuevo módulo de alta
-    public function estudiantes()
-    {
-        return $this->belongsToMany(
-            Estudiante::class,
-            'materia_estudiante',
-            'materia_nrc',
-            'estudiante_id',
-            'nrc',
-            'id'
-        )->withPivot('profesor_id', 'status')
-         ->withTimestamps();
-    }
-
+   public function estudiantes()
+{
+    return $this->belongsToMany(
+        Estudiante::class,
+        'alumno_materia', // 🔥 CAMBIO AQUÍ
+        'materia_nrc',
+        'alumno_id',
+        'nrc',
+        'id'
+    )
+    ->withPivot( 'status')
+    ->withTimestamps();
+}
     // Estudiantes activos de esta materia
     public function estudiantesActivos()
     {

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Notificacion;
+
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 
 class User extends Authenticatable
 {
@@ -53,23 +56,44 @@ class User extends Authenticatable
         return $this->hasMany(Materia::class, 'profesor_id');
     }
 
+
+
+
+
+    public function notificaciones()
+    {
+        return $this->hasMany(Notificacion::class)->latest();
+    }
+
+
+
+
+
+
+
+
     /**
      * Relación para el ALUMNO:
      * Un usuario (alumno) pertenece a muchas materias a través de la tabla pivote.
      * Cambiamos el nombre a 'materias' para que coincida con el AlumnoController.
      */
-    public function materias()
+        public function materias()
     {
-        return $this->belongsToMany(Materia::class, 'alumno_materia', 'alumno_id', 'materia_nrc')
-                    ->withPivot([
-                        'clave_unica',
-                        'clave_asistencia',
-                        'promedio_real', 
-                        'promedio_redondeado', 
-                        'status', 
-                        'qr_path', 
-                        'fecha_baja'
-                    ])
-                    ->withTimestamps();
+        return $this->belongsToMany(
+            Materia::class,
+            'alumno_materia',
+            'alumno_id',
+            'materia_nrc',
+            'id',
+            'nrc'
+        )->withPivot(
+            'clave_unica',
+            'clave_asistencia',
+            'promedio_real',
+            'promedio_redondeado',
+            'status',
+            'qr_path',
+            'fecha_baja'
+        )->withTimestamps();
     }
 }

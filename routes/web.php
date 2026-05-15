@@ -10,10 +10,7 @@ use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\ActividadController;
 use App\Http\Controllers\AsistenciaController;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\CalificacionController;
+use App\Http\Controllers\NotificacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,13 +19,6 @@ use App\Http\Controllers\CalificacionController;
 */
 
 // 1. Redirección inicial
-Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-    return redirect()->route('login');
-});
-
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // 2. Redirección Inteligente
@@ -37,7 +27,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         if (!$user || !$user->role) {
             Auth::logout();
-            return redirect('/login')->withErrors(['role' => 'Acceso denegado o rol no asignado.']);
+            return redirect('/login')->withErrors([
+                'role' => 'Acceso denegado o rol no asignado.'
+            ]);
         }
 
         $role = trim(strtolower($user->role));
@@ -46,9 +38,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'admin'    => redirect()->route('admin.dashboard'),
             'profesor' => redirect()->route('profesor.dashboard'),
             'alumno'   => redirect()->route('alumno.dashboard'),
-            default    => Auth::logout() || redirect('/login')->withErrors(['role' => 'Rol no reconocido.']),
+            default    => redirect('/login')->withErrors([
+                'role' => 'Rol no reconocido.'
+            ]),
         };
     })->name('dashboard');
+
+
+
+
+
+
+
+
+    Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
+    Route::post('/notificaciones/{notificacion}/leer', [NotificacionController::class, 'marcarLeida'])->name('notificaciones.leer');
+    Route::post('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodas'])->name('notificaciones.leer_todas');
+
+
+
+
+
+
+
+
+
+
+
+
 
     // 3. SECCIÓN ADMINISTRADOR
     Route::middleware(['can:admin'])->prefix('admin')->group(function () {
@@ -66,7 +83,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Ver todos los estudiantes con clave única
         Route::get('/estudiantes', function () {
-            $buscar      = request('buscar');
+            $buscar = request('buscar');
+
             $estudiantes = \App\Models\Estudiante::with('materias')
                 ->when($buscar, function ($q) use ($buscar) {
                     $q->where('nombre', 'like', "%{$buscar}%")
@@ -75,20 +93,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 })
                 ->orderBy('nombre')
                 ->paginate(20);
-            $conClave  = \App\Models\Estudiante::whereNotNull('clave_unica')->count();
-            $sinClave  = \App\Models\Estudiante::whereNull('clave_unica')->count();
+
+            $conClave = \App\Models\Estudiante::whereNotNull('clave_unica')->count();
+            $sinClave = \App\Models\Estudiante::whereNull('clave_unica')->count();
+
             return view('admin.estudiantes', compact('estudiantes', 'conClave', 'sinClave'));
         })->name('admin.estudiantes');
 
         // Baja de una materia específica
         Route::delete('/estudiantes/{estudiante}/baja-materia', function (\App\Models\Estudiante $estudiante) {
             $nrc = request('nrc');
+
             if (!$nrc) {
                 return back()->with('error', 'Debes seleccionar una materia.');
             }
+
             $estudiante->materias()->detach($nrc);
 
-            // También actualizar alumno_materia si existe
             $user = \App\Models\User::where('email', $estudiante->email)->first();
             if ($user) {
                 $user->materias()->updateExistingPivot($nrc, [
@@ -104,13 +125,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/estudiantes/{estudiante}/baja-total', function (\App\Models\Estudiante $estudiante) {
             $nombre = $estudiante->nombre;
 
-            // Eliminar user asociado
-            $user = \App\Models\User::where('email', $estudiante->email)->where('role', 'alumno')->first();
+            $user = \App\Models\User::where('email', $estudiante->email)
+                ->where('role', 'alumno')
+                ->first();
+
             if ($user) {
                 $user->delete();
             }
 
-            // Eliminar estudiante (cascade eliminará materia_estudiante)
             $estudiante->delete();
 
             return back()->with('success', "El estudiante {$nombre} fue eliminado completamente de la plataforma.");
@@ -122,11 +144,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 return back()->with('error', "El estudiante {$estudiante->nombre} ya tiene una clave asignada.");
             }
 
-            // Generar clave única
             $clave = \App\Models\Estudiante::generarClaveUnica();
             $estudiante->update(['clave_unica' => $clave]);
 
-            // Crear user con rol alumno si no existe — necesario para el login
             $user = \App\Models\User::firstOrCreate(
                 ['email' => $estudiante->email],
                 [
@@ -136,7 +156,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ]
             );
 
-            // Vincular en alumno_materia para cada materia del estudiante
             foreach ($estudiante->materias as $materia) {
                 $yaVinculado = \Illuminate\Support\Facades\DB::table('alumno_materia')
                     ->where('alumno_id', $user->id)
@@ -144,13 +163,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->exists();
 
                 if (!$yaVinculado) {
-                    // Generar clave_unica única verificando contra alumno_materia
                     do {
                         $claveMateria = strtoupper(\Illuminate\Support\Str::random(10));
                     } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
                         ->where('clave_unica', $claveMateria)->exists());
 
-                    // Generar clave_asistencia única verificando contra alumno_materia
                     do {
                         $claveAsistencia = strtoupper(\Illuminate\Support\Str::random(10));
                     } while (\Illuminate\Support\Facades\DB::table('alumno_materia')
@@ -183,15 +200,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/grupo/{nrc}/actividades', [ActividadController::class, 'store'])->name('profesor.actividades.store');
         Route::delete('/grupo/{nrc}/actividades/{actividad}', [ActividadController::class, 'destroy'])->name('profesor.actividades.destroy');
 
+
+        Route::post('/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])
+        ->name('profesor.actas.guardar_manual');
+
+        
         // Asistencia
         Route::get('/asistencia/{nrc}', function ($nrc) {
-            $materia  = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
-            $alumnos  = $materia->estudiantes()->wherePivot('status', 'activo')->get();
+            $materia = \App\Models\Materia::where('nrc', $nrc)->firstOrFail();
+            $alumnos = $materia->estudiantes()->wherePivot('status', 'activo')->get();
             $asistenciaActiva = \App\Models\Asistencia::where('materia_nrc', $nrc)
-                                ->where('activa', true)
-                                ->where('termina_en', '>', now())
-                                ->latest()
-                                ->first();
+                ->where('activa', true)
+                ->where('termina_en', '>', now())
+                ->latest()
+                ->first();
+
             return view('profesor.asistencia', compact('materia', 'alumnos', 'asistenciaActiva'));
         })->name('profesor.asistencia');
 
@@ -199,26 +222,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return back()->with('success', 'Lista de asistencia guardada correctamente.');
         })->name('asistencias.guardar');
 
-        // --- MÓDULO DE ACTAS (CORREGIDO) ---
+        // Módulo de actas
         Route::prefix('actas/{nrc}')->group(function () {
-            // 1. Vista principal
             Route::get('/importar', [ActasController::class, 'index'])->name('profesor.actas.index');
-            
-            // 2. Procesar archivos
             Route::post('/procesar', [ActasController::class, 'procesar'])->name('profesor.actas.procesar');
-            
-            // 3. Exportar Excel
             Route::post('/exportar', [ActasController::class, 'exportar'])->name('profesor.actas.exportar');
 
-            // 4. Eliminar actividad (URL CORTA porque ya hereda el prefijo)
             Route::delete('/eliminar-actividad/{actividad}', [ActasController::class, 'eliminarActividad'])
                 ->name('profesor.actas.eliminarActividad');
 
-            // 5. Eliminar TODO el acta (Opcional, por si quieres el botón de limpieza total)
             Route::delete('/eliminar-todo', [ActasController::class, 'eliminar'])
                 ->name('profesor.actas.eliminar');
         });
-         Route::post('/profesor/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])
+
+        // Guardado manual de actas
+        Route::post('/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])
             ->name('profesor.actas.guardar_manual');
 
         // Historial de asistencias
@@ -228,18 +246,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/grupo/{nrc}/actividades/{actividad}/detalle', [ActividadController::class, 'detalle'])->name('profesor.actividades.detalle');
         Route::post('/grupo/{nrc}/actividades/{actividad}/calificar', [ActividadController::class, 'calificar'])->name('profesor.actividades.calificar');
     });
-    // 5. SECCIÓN ALUMNO
+
+        // 5. SECCIÓN ALUMNO
     Route::middleware(['can:alumno'])->prefix('alumno')->group(function () {
         Route::get('/dashboard', [AlumnoController::class, 'index'])->name('alumno.dashboard');
         Route::get('/credencial/{nrc}', [AlumnoController::class, 'showCredencial'])->name('alumno.credencial');
-        Route::post('/materia/{nrc}/baja', [AlumnoController::class, 'solicitarBaja'])->name('alumno.baja');
         Route::post('/asistencia/registrar', [AlumnoController::class, 'registrarAsistencia'])->name('alumno.asistencia.registrar');
-        Route::get('/alumno/materia/{nrc}', [AlumnoController::class, 'show'])->name('alumno.materia.detalle');
-
-        // Calificaciones del alumno por materia
+        Route::get('/materia/{nrc}', [AlumnoController::class, 'show'])->name('alumno.materia.detalle');
+        Route::post('/materia/{nrc}/baja', [AlumnoController::class, 'solicitarBaja'])->name('alumno.baja');
         Route::get('/materia/{nrc}/calificaciones', [AlumnoController::class, 'calificaciones'])->name('alumno.calificaciones');
-
-        // Subir / eliminar archivo de actividad
         Route::post('/actividad/{actividad}/subir', [ActividadController::class, 'subirArchivo'])->name('alumno.actividad.subir');
         Route::delete('/actividad/{actividad}/eliminar', [ActividadController::class, 'eliminarArchivo'])->name('alumno.actividad.eliminar');
     });
@@ -248,7 +263,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+
+}); // ESTE sí es el único cierre del grupo auth+verified
 
 // 7. Autenticación
 require __DIR__.'/auth.php';
@@ -257,10 +273,10 @@ require __DIR__.'/auth.php';
 require __DIR__.'/estudiantes.php';
 
 // 9. API Asistencia
-Route::post('/asistencia/iniciar',        [AsistenciaController::class, 'iniciar']);
-Route::post('/asistencia/detener',        [AsistenciaController::class, 'detener']);
-Route::post('/asistencia/qr',             [AsistenciaController::class, 'registrarQR']);
-Route::post('/asistencia/registrar',      [AsistenciaController::class, 'registrar']);
-Route::get('/asistencia/estado',          [AsistenciaController::class, 'estadoActual']);
-Route::post('/asistencia/cambiar-estatus',[AsistenciaController::class, 'cambiarEstatus']);
-Route::post('/asistencia/todos-presentes',[AsistenciaController::class, 'todosPresentes']);
+Route::post('/asistencia/iniciar', [AsistenciaController::class, 'iniciar']);
+Route::post('/asistencia/detener', [AsistenciaController::class, 'detener']);
+Route::post('/asistencia/qr', [AsistenciaController::class, 'registrarQR']);
+Route::post('/asistencia/registrar', [AsistenciaController::class, 'registrar']);
+Route::get('/asistencia/estado', [AsistenciaController::class, 'estadoActual']);
+Route::post('/asistencia/cambiar-estatus', [AsistenciaController::class, 'cambiarEstatus']);
+Route::post('/asistencia/todos-presentes', [AsistenciaController::class, 'todosPresentes']);

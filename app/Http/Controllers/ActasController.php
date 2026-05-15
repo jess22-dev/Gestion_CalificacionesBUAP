@@ -4,26 +4,25 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Materia;
-use App\Models\CalificacionFinal; 
+use App\Models\CalificacionFinal;
+use App\Models\Notificacion;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ActaExport;
+use Illuminate\Support\Facades\DB;
 
 class ActasController extends Controller
 {
     public function index($nrc)
     {
         $materia = Materia::where('nrc', $nrc)->firstOrFail();
-        
-        // 1. Traemos TODAS las notas
-        $notasTodas = CalificacionFinal::where('materia_nrc', (string)$nrc)->get();
 
-        // 2. Filtramos actividades de Teams (Dinámicas)
+        $notasTodas = CalificacionFinal::where('materia_nrc', (string) $nrc)->get();
+
         $actividades = $notasTodas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
-                                  ->pluck('actividad_nombre')
-                                  ->unique()
-                                  ->values();
+            ->pluck('actividad_nombre')
+            ->unique()
+            ->values();
 
-        // 3. Organizamos los datos por alumno
         $alumnosData = [];
         $notasAgrupadas = $notasTodas->groupBy('email_alumno');
 
@@ -31,10 +30,9 @@ class ActasController extends Controller
             $alumnosData[$correo] = [
                 'nombre' => $items->first()->nombre_alumno,
                 'notas'  => [],
-                'manual' => $items->firstWhere('actividad_nombre', 'DATOS_MANUALES')
+                'manual' => $items->firstWhere('actividad_nombre', 'DATOS_MANUALES'),
             ];
 
-            // Llenamos solo las que son de Teams
             foreach ($items->where('actividad_nombre', '!=', 'DATOS_MANUALES') as $n) {
                 $alumnosData[$correo]['notas'][$n->actividad_nombre] = $n->puntaje;
             }
@@ -43,7 +41,7 @@ class ActasController extends Controller
         return view('profesor.actas.index', [
             'materia'     => $materia,
             'actividades' => $actividades,
-            'alumnos'     => $alumnosData, 
+            'alumnos'     => $alumnosData,
         ]);
     }
 
@@ -53,107 +51,137 @@ class ActasController extends Controller
             'archivos_teams.*' => 'required|mimes:xlsx,xls,csv',
         ]);
 
+        $seActualizo = false;
+        $actividadesProcesadas = [];
+
         if ($request->hasFile('archivos_teams')) {
             foreach ($request->file('archivos_teams') as $archivo) {
                 $data = Excel::toArray([], $archivo);
                 $filas = collect($data[0]);
 
-                // Buscamos la fila que contiene los encabezados reales
                 $encabezados = $filas->first(function ($item) {
                     return is_array($item) && in_array('Dirección de correo', $item);
                 });
 
-                if (!$encabezados) continue; 
+                if (!$encabezados) {
+                    continue;
+                }
 
                 $colCorreo     = array_search('Dirección de correo', $encabezados);
                 $colTarea      = array_search('Tareas', $encabezados);
                 $colNombre     = array_search('Nombre completo', $encabezados);
                 $colPorcentaje = array_search('Porcentaje', $encabezados);
 
-                // Limpiamos la data para quitar encabezados y filas vacías
                 $datosLimpios = $filas->filter(function ($fila) use ($colCorreo) {
-                    return isset($fila[$colCorreo]) && str_contains($fila[$colCorreo], '@'); 
+                    return isset($fila[$colCorreo]) && str_contains($fila[$colCorreo], '@');
                 });
 
                 foreach ($datosLimpios as $fila) {
-                    $correo       = trim($fila[$colCorreo]);
-                    $actividad    = trim($fila[$colTarea]);
-                    $nombreAlumno = trim($fila[$colNombre]);
-                    
-                    // Lógica de calificación: Teams da decimal (0.8 = 80%)
+                    $correo       = trim($fila[$colCorreo] ?? '');
+                    $actividad    = trim($fila[$colTarea] ?? '');
+                    $nombreAlumno = trim($fila[$colNombre] ?? '');
+
                     $valorCelda   = $fila[$colPorcentaje] ?? 0;
                     $puntajeTeams = is_numeric($valorCelda) ? floatval($valorCelda) : 0;
-                    
-                    // IMPORTANTE: Aquí guardamos con un decimal para que el promedio 
-                    // de la tabla web sea exacto antes del redondeo final del acta.
-                    $notaFinal = round($puntajeTeams * 10, 1);
+                    $notaFinal    = round($puntajeTeams * 10, 1);
 
                     CalificacionFinal::updateOrCreate(
                         [
-                            'materia_nrc'      => (string)$nrc,
+                            'materia_nrc'      => (string) $nrc,
                             'email_alumno'     => $correo,
                             'actividad_nombre' => $actividad,
                         ],
                         [
-                            'nombre_alumno'    => $nombreAlumno,
-                            'puntaje'          => $notaFinal,
-                            'fecha_actividad'  => now()->format('d/m/Y'), 
+                            'nombre_alumno'   => $nombreAlumno,
+                            'puntaje'         => $notaFinal,
+                            'fecha_actividad' => now()->format('d/m/Y'),
                         ]
                     );
+
+                    $seActualizo = true;
+
+                    if ($actividad !== '') {
+                        $actividadesProcesadas[] = $actividad;
+                    }
                 }
             }
         }
 
-        return redirect()->route('profesor.actas.index', $nrc)
-                         ->with('success', 'Calificaciones actualizadas.');
+        if ($seActualizo) {
+            $actividadesProcesadas = array_values(array_unique($actividadesProcesadas));
+
+            $actividadNombre = count($actividadesProcesadas) === 1
+                ? $actividadesProcesadas[0]
+                : null;
+
+            $this->notificarCalificacionesPublicadas($nrc, $actividadNombre);
+        }
+
+        return redirect()
+            ->route('profesor.actas.index', $nrc)
+            ->with('success', 'Calificaciones actualizadas.');
     }
 
     public function guardarManual(Request $request, $nrc)
     {
         try {
-            // El campo viene dinámico (participacion, proyecto, etc.)
+            $request->validate([
+                'email'  => 'required|email',
+                'nombre' => 'required|string',
+                'campo'  => 'required|string',
+                'valor'  => 'nullable',
+            ]);
+
             $campo = $request->campo;
             $valor = $request->valor === "" ? null : $request->valor;
 
             CalificacionFinal::updateOrCreate(
                 [
-                    'materia_nrc'      => (string)$nrc,
+                    'materia_nrc'      => (string) $nrc,
                     'email_alumno'     => $request->email,
                     'actividad_nombre' => 'DATOS_MANUALES',
                 ],
                 [
                     'nombre_alumno' => $request->nombre,
-                    $campo          => $valor, // Se actualiza solo el campo enviado (U1, Proyecto, etc.)
+                    $campo          => $valor,
                 ]
             );
-            return response()->json(['status' => 'success']);
+
+            // Notificación para el alumno afectado
+            $this->notificarCalificacionManualAlumno($nrc, $request->email, $campo);
+
+            return response()->json([
+                'status' => 'success'
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
     public function exportar(Request $request, $nrc)
     {
         $materia = Materia::where('nrc', $nrc)->firstOrFail();
-        $todasLasNotas = CalificacionFinal::where('materia_nrc', (string)$nrc)->get();
+        $todasLasNotas = CalificacionFinal::where('materia_nrc', (string) $nrc)->get();
 
-        // Lista de actividades de Teams para las columnas del Excel
         $listaActividades = $todasLasNotas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
-                                          ->pluck('actividad_nombre')
-                                          ->unique()
-                                          ->values()
-                                          ->toArray();
+            ->pluck('actividad_nombre')
+            ->unique()
+            ->values()
+            ->toArray();
 
         $datosAlumnosFlat = [];
         $notasAgrupadas = $todasLasNotas->groupBy('email_alumno');
 
         foreach ($notasAgrupadas as $correo => $items) {
             $manual = $items->firstWhere('actividad_nombre', 'DATOS_MANUALES');
-            
+
             $fila = [
                 'nombre' => $items->first()->nombre_alumno,
                 'email'  => $correo,
-                'notas_teams' => [], 
+                'notas_teams' => [],
                 'manual' => [
                     'participacion'   => $manual->participacion ?? 0,
                     'proyecto'        => $manual->proyecto ?? 0,
@@ -163,7 +191,6 @@ class ActasController extends Controller
                 ]
             ];
 
-            // Aseguramos que las notas de Teams sigan el mismo orden que los encabezados
             foreach ($listaActividades as $actividad) {
                 $nota = $items->firstWhere('actividad_nombre', $actividad);
                 $fila['notas_teams'][$actividad] = $nota->puntaje ?? 0;
@@ -173,23 +200,102 @@ class ActasController extends Controller
         }
 
         return Excel::download(
-            new ActaExport($datosAlumnosFlat, $listaActividades, $materia), 
+            new ActaExport($datosAlumnosFlat, $listaActividades, $materia),
             "Acta_Final_{$nrc}.xlsx"
         );
     }
 
-    // NUEVO MÉTODO PARA ELIMINAR UNA ACTIVIDAD 
     public function eliminarActividad($nrc, $actividad)
     {
         try {
-            // Borramos la actividad específica para todos los alumnos de ese NRC
-            CalificacionFinal::where('materia_nrc', (string)$nrc)
-                            ->where('actividad_nombre', $actividad)
-                            ->delete();
+            CalificacionFinal::where('materia_nrc', (string) $nrc)
+                ->where('actividad_nombre', $actividad)
+                ->delete();
 
-            return redirect()->back()->with('success', "La actividad '{$actividad}' ha sido eliminada.");
+            return redirect()
+                ->back()
+                ->with('success', "La actividad '{$actividad}' ha sido eliminada.");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'No se pudo eliminar la actividad.');
+            return redirect()
+                ->back()
+                ->with('error', 'No se pudo eliminar la actividad.');
         }
+    }
+
+    private function notificarCalificacionesPublicadas($nrc, $actividadNombre = null)
+    {
+        $materia = Materia::where('nrc', $nrc)->first();
+
+        if (!$materia) {
+            return;
+        }
+
+        $alumnosIds = DB::table('alumno_materia')
+            ->where('materia_nrc', $nrc)
+            ->where('status', 'activo')
+            ->pluck('alumno_id');
+
+        foreach ($alumnosIds as $alumnoId) {
+            // Evita spam de notificaciones repetidas en pocos minutos
+            $yaExisteReciente = Notificacion::where('user_id', $alumnoId)
+                ->where('tipo', 'calificacion')
+                ->where('url', route('alumno.calificaciones', ['nrc' => $nrc]))
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->exists();
+
+            if ($yaExisteReciente) {
+                continue;
+            }
+
+            Notificacion::create([
+                'user_id' => $alumnoId,
+                'titulo'  => 'Nueva calificación publicada',
+                'mensaje' => $actividadNombre
+                    ? 'Se publicó una calificación nueva en "' . $actividadNombre . '" de la materia ' . $materia->Materia . '.'
+                    : 'Se publicaron nuevas calificaciones en la materia ' . $materia->Materia . '.',
+                'tipo'   => 'calificacion',
+                'url'    => route('alumno.calificaciones', ['nrc' => $nrc]),
+                'leida'  => false,
+            ]);
+        }
+    }
+
+    private function notificarCalificacionManualAlumno($nrc, $emailAlumno, $campo = null)
+    {
+        $materia = Materia::where('nrc', $nrc)->first();
+
+        if (!$materia) {
+            return;
+        }
+
+        $alumnoId = DB::table('users')
+            ->where('email', $emailAlumno)
+            ->where('role', 'alumno')
+            ->value('id');
+
+        if (!$alumnoId) {
+            return;
+        }
+
+        $yaExisteReciente = Notificacion::where('user_id', $alumnoId)
+            ->where('tipo', 'calificacion')
+            ->where('url', route('alumno.calificaciones', ['nrc' => $nrc]))
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->exists();
+
+        if ($yaExisteReciente) {
+            return;
+        }
+
+        $nombreCampo = $campo ? str_replace('_', ' ', $campo) : 'calificación';
+
+        Notificacion::create([
+            'user_id' => $alumnoId,
+            'titulo'  => 'Calificación actualizada',
+            'mensaje' => 'Tu profesor actualizó "' . $nombreCampo . '" en la materia ' . $materia->Materia . '.',
+            'tipo'    => 'calificacion',
+            'url'     => route('alumno.calificaciones', ['nrc' => $nrc]),
+            'leida'   => false,
+        ]);
     }
 }

@@ -29,6 +29,31 @@
                 </div>
             @endif
 
+
+
+
+
+            <div class="mb-4">
+                <a href="{{ route('alumno.materia.detalle', $materia->nrc) }}"
+                class="inline-flex items-center gap-2 text-[#002d62] font-bold hover:underline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Volver al detalle de la materia
+                </a>
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+
             {{-- Resumen de promedio --}}
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 mb-6 overflow-hidden">
                 <div class="bg-gradient-to-br from-[#1e4b8a] to-[#002d62] p-6 text-white flex justify-between items-center">

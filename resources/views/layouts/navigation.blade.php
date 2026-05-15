@@ -9,7 +9,6 @@
                 </div>
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    
                     {{-- Link para ADMINISTRADOR --}}
                     @can('admin')
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
@@ -22,9 +21,6 @@
                         <x-nav-link :href="route('profesor.dashboard')" :active="request()->routeIs('profesor.dashboard')">
                             {{ __('Mis Materias') }}
                         </x-nav-link>
-                        <x-nav-link :href="route('materias.index')" :active="request()->routeIs('materias.*')">
-                            {{ __('Gestión') }}
-                        </x-nav-link>
                     @endcan
 
                     {{-- Link para ALUMNO --}}
@@ -33,17 +29,33 @@
                             {{ __('Mi Seguimiento') }}
                         </x-nav-link>
                     @endcan
-
                 </div>
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                @auth
+                    @php
+                        $noLeidas = auth()->user()->notificaciones()->where('leida', false)->count();
+                    @endphp
+
+                    <a href="{{ route('notificaciones.index') }}"
+                       class="relative mr-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        <span>🔔</span>
+                        <span>Notificaciones</span>
+
+                        @if($noLeidas > 0)
+                            <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-2 text-xs font-black text-white bg-red-500 rounded-full">
+                                {{ $noLeidas }}
+                            </span>
+                        @endif
+                    </a>
+                @endauth
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
-                            {{-- Mostramos Nombre + Rol para evitar confusiones --}}
                             <div>
-                                {{ Auth::user()->name }} 
+                                {{ Auth::user()->name }}
                                 <span class="text-xs text-blue-500 font-bold">({{ ucfirst(Auth::user()->role) }})</span>
                             </div>
 
@@ -56,6 +68,17 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        <x-dropdown-link :href="route('notificaciones.index')">
+                            {{ __('Notificaciones') }}
+                            @auth
+                                @if($noLeidas > 0)
+                                    <span class="ml-2 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1 text-xs font-black text-white bg-red-500 rounded-full">
+                                        {{ $noLeidas }}
+                                    </span>
+                                @endif
+                            @endauth
+                        </x-dropdown-link>
+
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Perfil') }}
                         </x-dropdown-link>
@@ -63,7 +86,7 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                onclick="event.preventDefault(); this.closest('form').submit();">
                                 {{ __('Cerrar Sesión') }}
                             </x-dropdown-link>
                         </form>
@@ -89,16 +112,33 @@
                     {{ __('Panel Admin') }}
                 </x-responsive-nav-link>
             @endcan
+
             @can('profesor')
                 <x-responsive-nav-link :href="route('profesor.dashboard')" :active="request()->routeIs('profesor.dashboard')">
                     {{ __('Mis Materias') }}
                 </x-responsive-nav-link>
             @endcan
+
             @can('alumno')
                 <x-responsive-nav-link :href="route('alumno.dashboard')" :active="request()->routeIs('alumno.dashboard')">
                     {{ __('Mi Seguimiento') }}
                 </x-responsive-nav-link>
             @endcan
+
+            @auth
+                @php
+                    $noLeidas = auth()->user()->notificaciones()->where('leida', false)->count();
+                @endphp
+
+                <x-responsive-nav-link :href="route('notificaciones.index')" :active="request()->routeIs('notificaciones.*')">
+                    {{ __('Notificaciones') }}
+                    @if($noLeidas > 0)
+                        <span class="ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-2 text-xs font-black text-white bg-red-500 rounded-full">
+                            {{ $noLeidas }}
+                        </span>
+                    @endif
+                </x-responsive-nav-link>
+            @endauth
         </div>
 
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
@@ -115,7 +155,7 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault(); this.closest('form').submit();">
+                        onclick="event.preventDefault(); this.closest('form').submit();">
                         {{ __('Cerrar Sesión') }}
                     </x-responsive-nav-link>
                 </form>

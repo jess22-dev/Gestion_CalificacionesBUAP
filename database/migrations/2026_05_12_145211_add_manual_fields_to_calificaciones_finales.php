@@ -34,8 +34,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('calificaciones_finales', function (Blueprint $table) {
+         Schema::dropIfExists('calificacion_finals'); {
             //
-        });
+        };
     }
 };

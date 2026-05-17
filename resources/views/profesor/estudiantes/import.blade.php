@@ -5,15 +5,13 @@
 
     <div class="max-w-3xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 
-        {{-- Botón de regreso --}}
         <div class="mb-4">
             <a href="{{ route('profesor.estudiantes.index', ['nrc' => $nrc]) }}"
                class="inline-flex items-center gap-2 text-[#1e4b8a] font-bold hover:underline text-sm">
-                ← Volver a la lista de estudiantes
+                Volver a la lista de estudiantes
             </a>
         </div>
 
-        {{-- Info de la materia --}}
         @if($materia)
             <div class="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
                 <span class="font-bold">Materia:</span> {{ $materia->Materia }}
@@ -22,15 +20,36 @@
             </div>
         @endif
 
-        {{-- Alertas --}}
+        @if(session('success'))
+            <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-800 rounded-xl">
+                <strong> {{ session('success') }}</strong>
+                @if(session('intercambio') && count(session('intercambio')) > 0)
+                    <p class="text-sm mt-2 font-semibold">Alumnos de intercambio agregados:</p>
+                    <ul class="mt-1 text-sm list-disc list-inside">
+                        @foreach(session('intercambio') as $ic)
+                            <li>{{ $ic['nombre'] }} <span class="bg-orange-100 text-orange-700 text-xs px-1 rounded">intercambio</span></li>
+                        @endforeach
+                    </ul>
+                @endif
+                @if(session('yaEnOtraMateria') && count(session('yaEnOtraMateria')) > 0)
+                    <p class="text-sm mt-2 font-semibold text-blue-700">También inscritos en otra materia:</p>
+                    <ul class="mt-1 text-sm list-disc list-inside">
+                        @foreach(session('yaEnOtraMateria') as $yt)
+                            <li>{{ $yt['nombre'] }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        @endif
+
         @if(session('warning'))
             <div class="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-xl">
-                <strong>{{ session('warning') }}</strong>
+                <strong> {{ session('warning') }}</strong>
                 @if(session('duplicados'))
                     <p class="text-sm mt-2 font-semibold">Ya existían en esta materia:</p>
                     <ul class="mt-1 text-sm list-disc list-inside">
                         @foreach(session('duplicados') as $dup)
-                            <li>{{ $dup['nombre'] }} — {{ $dup['codigo'] }}</li>
+                            <li>{{ $dup['nombre'] }} — {{ $dup['codigo'] ?? 'sin código' }}</li>
                         @endforeach
                     </ul>
                 @endif
@@ -39,47 +58,50 @@
 
         @if(session('error'))
             <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-800 rounded-xl">
-                {{ session('error') }}
+                 {{ session('error') }}
             </div>
         @endif
 
-        <div class="bg-white rounded-xl shadow p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Importar desde Excel / CSV</h3>
-            <p class="text-sm text-gray-500 mb-6">Los estudiantes se vincularán automáticamente a esta materia.</p>
+        <div class="bg-white rounded-xl shadow p-6 mb-4">
+            <h3 class="text-lg font-bold text-gray-800 mb-1">Importar desde Lista Oficial BUAP</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                Sube el archivo HTM descargado del SIIAA para importar la lista oficial de alumnos.
+            </p>
 
-            {{-- Info columnas --}}
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
-                <p class="font-semibold mb-1">Columnas requeridas en la primera fila:</p>
-                <ul class="list-disc list-inside space-y-1">
-                    <li><code class="bg-blue-100 px-1 rounded">nombre</code></li>
-                    <li><code class="bg-blue-100 px-1 rounded">email</code></li>
-                    <li><code class="bg-blue-100 px-1 rounded">codigo_estudiante</code> — 9 dígitos</li>
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 mb-6">
+                <p class="font-black mb-2"> Lista Oficial BUAP</p>
+                <ul class="list-disc list-inside space-y-1 text-xs">
+                    <li>Descárgalo del SIIAA → Servicios a Docentes → Lista de Clase</li>
+                    <li>Contiene los alumnos <strong>oficialmente inscritos</strong></li>
+                    <li>Formato .htm o .html</li>
                 </ul>
-                <p class="mt-2 text-xs">Si un alumno ya existe en otra materia, se agregará automáticamente a esta y se te notificará.</p>
             </div>
 
             <form action="{{ route('profesor.estudiantes.import.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="nrc" value="{{ $nrc }}">
 
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Seleccionar archivo <span class="text-red-500">*</span>
+                {{-- HTM obligatorio --}}
+                <div class="mb-5">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        Lista Oficial BUAP  <span class="text-red-500">*</span>
                     </label>
-                    <div id="dropZone"
-                         onclick="document.getElementById('archivo').click()"
-                         class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-[#002d62] hover:bg-blue-50 transition">
-                        <p id="dropLabel" class="text-gray-500 text-sm">
-                            Arrastra tu archivo aquí o <u>haz clic para buscar</u>
+                    <div id="dropZoneHtm"
+                         onclick="document.getElementById('archivo_htm').click()"
+                         class="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#002d62] hover:bg-blue-50 transition">
+                        <p id="labelHtm" class="text-gray-500 text-sm">
+                            Arrastra el archivo <strong>.htm</strong> aquí o <u>haz clic para buscar</u>
                         </p>
                     </div>
-                    <input type="file" id="archivo" name="archivo"
-                           accept=".xlsx,.xls,.csv" class="hidden"
-                           onchange="mostrarArchivo(this)">
-                    @error('archivo')
+                    <input type="file" id="archivo_htm" name="archivo_htm"
+                           accept=".htm,.html" class="hidden"
+                           onchange="mostrarArchivo(this, 'labelHtm', 'dropZoneHtm', 'blue')">
+                    @error('archivo_htm')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+
 
                 <div class="flex justify-end gap-3">
                     <a href="{{ route('profesor.estudiantes.index', ['nrc' => $nrc]) }}"
@@ -87,55 +109,36 @@
                         Cancelar
                     </a>
                     <button type="submit"
-                            class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-                        ↑ Importar
+                            class="px-6 py-2 bg-[#002d62] text-white rounded-lg text-sm font-semibold hover:bg-[#1e4b8a] transition">
+                        ↑ Importar Lista
                     </button>
                 </div>
             </form>
         </div>
 
-        {{-- Ejemplo --}}
-        <div class="mt-4 bg-gray-50 rounded-xl p-4">
-            <p class="text-sm font-semibold text-gray-600 mb-2"> Ejemplo de estructura:</p>
-            <table class="w-full text-sm bg-white rounded border border-gray-200">
-                <thead class="bg-green-100">
-                    <tr>
-                        <th class="px-3 py-2 text-left border-r border-gray-200">nombre</th>
-                        <th class="px-3 py-2 text-left border-r border-gray-200">email</th>
-                        <th class="px-3 py-2 text-left">matricula</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="border-t border-gray-100">
-                        <td class="px-3 py-2 border-r border-gray-100">Ana García López</td>
-                        <td class="px-3 py-2 border-r border-gray-100">ana.garcia@correo.buap.mx</td>
-                        <td class="px-3 py-2">202312345</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+
     </div>
 
     <script>
-    function mostrarArchivo(input) {
+    function mostrarArchivo(input, labelId, zoneId, color) {
         if (input.files.length > 0) {
-            document.getElementById('dropLabel').innerHTML =
+            document.getElementById(labelId).innerHTML =
                 '<strong>' + input.files[0].name + '</strong> seleccionado ✔';
-            document.getElementById('dropZone').classList.add('border-green-400', 'bg-green-50');
         }
     }
-    const zone = document.getElementById('dropZone');
+
+    const zone = document.getElementById('dropZoneHtm');
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('bg-blue-50'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('bg-blue-50'));
     zone.addEventListener('drop', e => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (file) {
-            const input = document.getElementById('archivo');
+            const input = document.getElementById('archivo_htm');
             const dt = new DataTransfer();
             dt.items.add(file);
             input.files = dt.files;
-            mostrarArchivo(input);
+            mostrarArchivo(input, 'labelHtm', 'dropZoneHtm', 'blue');
         }
     });
     </script>

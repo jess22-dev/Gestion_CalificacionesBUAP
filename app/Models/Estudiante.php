@@ -17,6 +17,7 @@ class Estudiante extends Model
         'email',
         'codigo_estudiante',
         'clave_unica',
+        'es_intercambio',
     ];
 
     /**

@@ -23,11 +23,7 @@
                     {{ session('success') }}
                 </div>
             @endif
-            @if(session('error'))
-                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-800 rounded-xl">
-                     {{ session('error') }}
-                </div>
-            @endif
+
 
             {{-- Resumen de promedio --}}
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 mb-6 overflow-hidden">
@@ -79,55 +75,6 @@
                                         <p class="text-xs text-gray-400">/ 10</p>
                                     @else
                                         <p class="text-gray-300 text-sm italic">Sin calificar</p>
-                                    @endif
-                                </div>
-                            </div>
-
-                            {{-- Estado y subida de archivo --}}
-                            <div class="p-5 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div class="flex items-center gap-3">
-                                    @if($entregado)
-                                        <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
-                                             Entregado
-                                        </span>
-                                        @if($archivo)
-                                            <span class="text-xs text-gray-500 italic">{{ $archivo }}</span>
-                                        @endif
-                                    @else
-                                        <span class="bg-red-100 text-red-600 text-xs font-bold px-3 py-1 rounded-full">
-                                             Pendiente
-                                        </span>
-                                    @endif
-                                </div>
-
-                                <div class="flex gap-2">
-                                    {{-- Subir / reemplazar archivo --}}
-                                    <form method="POST"
-                                          action="{{ route('alumno.actividad.subir', $actividad->id) }}"
-                                          enctype="multipart/form-data"
-                                          class="flex items-center gap-2">
-                                        @csrf
-                                        <input type="file" name="archivo"
-                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                            class="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#002d62] file:text-white file:text-xs file:font-bold file:cursor-pointer hover:file:bg-[#1e4b8a]">
-                                        <button type="submit"
-                                            class="bg-[#002d62] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#1e4b8a] transition whitespace-nowrap">
-                                            {{ $entregado ? 'Reemplazar' : 'Subir archivo' }}
-                                        </button>
-                                    </form>
-
-                                    {{-- Eliminar archivo --}}
-                                    @if($entregado)
-                                        <form method="POST"
-                                              action="{{ route('alumno.actividad.eliminar', $actividad->id) }}"
-                                              onsubmit="return confirm('¿Eliminar el archivo entregado?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                class="bg-red-100 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">
-                                                Quitar
-                                            </button>
-                                        </form>
                                     @endif
                                 </div>
                             </div>

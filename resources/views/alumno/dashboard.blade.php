@@ -13,7 +13,7 @@
             <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between px-4 lg:px-0 gap-4">
                 <div>
                     <h3 class="text-4xl font-black text-[#002d62] tracking-tighter uppercase italic leading-none">Mi Carga Académica</h3>
-                    <p class="text-gray-500 font-medium italic mt-2">Gestiona tus clases y registra tu asistencia.</p>
+                    <p class="text-gray-500 font-medium italic mt-2">Consulta tus materias y presenta tu QR de asistencia.</p>
                 </div>
             </div>
 
@@ -29,20 +29,20 @@
                         </span>
                     </div>
 
-                    <a href="{{ route('alumno.materia.detalle', $materia->nrc) }}" class="block">
+                    <div>
                         <div class="bg-gradient-to-br from-[#1e4b8a] to-[#002d62] p-8 h-44 flex items-start justify-between relative overflow-hidden group-hover:from-[#1a4178] group-hover:to-[#001d3d] transition-all duration-500">
                             <div class="relative z-10">
                                 <p class="text-blue-200 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Asignatura</p>
                                 <h4 class="text-2xl font-black text-white leading-tight italic uppercase drop-shadow-md">
                                     {{ $materia->Materia }}
                                 </h4>
-                                <p class="text-blue-300/60 text-[9px] font-bold mt-2 uppercase tracking-widest">Click para ver más detalles →</p>
+                                
                             </div>
                             <svg class="absolute -right-6 -bottom-6 w-32 h-32 text-white/10 transform rotate-12 group-hover:rotate-45 transition-transform duration-700" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10.394 2.827a1 1 0 00-.788 0l-7 3a1 1 0 000 1.848l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.848l-7-3zM14 9.528c.538.303.812.646.812.972 0 .326-.274.669-.812.972l-3.394 1.912a1 1 0 01-.788 0L6.414 11.472c-.538-.303-.812-.646-.812-.972 0-.326.274-.669.812-.972L10 11.528l4-2z"></path>
                             </svg>
                         </div>
-                    </a>
+                    </div>
 
                     <div class="p-8 -mt-10 relative z-10 bg-white rounded-t-[2.8rem] space-y-6">
                         <div class="bg-slate-50 rounded-3xl p-5 flex justify-between items-center border border-gray-100 shadow-inner">
@@ -58,17 +58,7 @@
                         </div>
 
                         <div class="space-y-4">
-                            <div class="flex items-center p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                                <div class="w-10 h-10 bg-[#002d62] rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-                                </div>
-                                <div>
-                                    <p class="text-[9px] font-black text-blue-400 uppercase leading-none mb-1">Clave de Asistencia</p>
-                                    <p class="text-base font-black text-[#002d62] tracking-wider uppercase">
-                                        {{ $materia->pivot->clave_asistencia ?? '—' }}
-                                    </p>
-                                </div>
-                            </div>
+
 
                             <div class="flex items-center px-2">
                                 <div class="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>

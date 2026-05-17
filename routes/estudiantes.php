@@ -29,6 +29,9 @@ Route::middleware(['auth', 'verified', 'can:profesor'])
         Route::get('/importar',  [EstudianteController::class, 'showImport'])->name('import');
         Route::post('/importar', [EstudianteController::class, 'import'])->name('import.store');
 
+        // Dar de baja alumnos faltantes en el HTM
+        Route::post('/baja-faltantes', [EstudianteController::class, 'bajaFaltantes'])->name('baja.faltantes');
+
         // Ver detalle
         Route::get('/{estudiante}', [EstudianteController::class, 'show'])->name('show');
     });

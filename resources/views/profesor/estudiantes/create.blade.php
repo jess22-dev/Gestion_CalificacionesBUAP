@@ -81,7 +81,7 @@
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        Código de estudiante <span class="text-red-500">*</span>
+                        Matricula <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="codigo_estudiante" value="{{ old('codigo_estudiante') }}"
                            placeholder="9 dígitos — Ej: 202312345"

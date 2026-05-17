@@ -73,10 +73,75 @@
                 <strong>ADVERTENCIA: Estos alumnos ya estaban en otra materia y fueron agregados a esta:</strong>
                 <ul class="mt-2 text-sm list-disc list-inside">
                     @foreach(session('yaEnOtraMateria') as $e)
-                        <li>{{ $e['nombre'] }} — {{ $e['codigo'] }}</li>
+                    <li>{{ $dup['nombre'] }} — {{ $e['codigo'] ?? 'sin código' }}</li>
                     @endforeach
                 </ul>
             </div>
+        @endif
+
+        {{-- Aviso de alumnos faltantes en el nuevo HTM --}}
+        @if(session('faltantes') && count(session('faltantes')) > 0)
+            <div class="mb-4 p-5 bg-orange-50 border-2 border-orange-400 text-orange-900 rounded-xl">
+                <div class="flex items-start gap-3 mb-3">
+
+                    <div>
+                        <p class="font-black text-base">Alumnos que ya no aparecen en la lista oficial</p>
+                        <p class="text-sm mt-1 text-orange-700">
+                            Los siguientes {{ count(session('faltantes')) }} alumno(s) estaban registrados en esta materia
+                            pero <strong>no aparecen</strong> en la nueva lista que acabas de subir.
+                            ¿Deseas darlos de baja de la materia?
+                        </p>
+                    </div>
+                </div>
+
+                <ul class="mb-4 space-y-1 text-sm list-disc list-inside ml-8">
+                    @foreach(session('faltantes') as $f)
+                        <li>{{ $f['nombre'] }} <span class="text-orange-500 font-mono text-xs">({{ $f['codigo'] }})</span></li>
+                    @endforeach
+                </ul>
+
+                <div class="flex gap-3 ml-8">
+                    {{-- Sí, dar de baja --}}
+                    <form method="POST" action="{{ route('profesor.estudiantes.baja.faltantes') }}">
+                        @csrf
+                        <input type="hidden" name="nrc" value="{{ session('nrc_import') }}">
+                        @foreach(session('faltantes') as $f)
+                            <input type="hidden" name="ids[]" value="{{ $f['id'] }}">
+                        @endforeach
+                        <button type="submit"
+                            onclick="return confirm('¿Confirmas dar de baja a {{ count(session('faltantes')) }} alumno(s)?')"
+                            class="px-5 py-2 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition">
+                            Sí, dar de baja
+                        </button>
+                    </form>
+
+                    {{-- No, mantener --}}
+                    <a href="{{ route('profesor.estudiantes.index', ['nrc' => session('nrc_import')]) }}"
+                       class="px-5 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition">
+                        No, mantenerlos
+                    </a>
+                </div>
+            </div>
+        @endif
+
+        {{-- Aviso de más/menos alumnos --}}
+        @if(session('total_antes') !== null && session('total_despues') !== null)
+            @php
+                $antes   = session('total_antes');
+                $despues = session('total_despues');
+                $diff    = $despues - $antes;
+            @endphp
+            @if($diff > 0)
+                <div class="mb-4 p-3 bg-blue-50 border border-blue-300 text-blue-800 rounded-xl text-sm">
+                     Se agregaron <strong>{{ $diff }}</strong> los nuevos alumno(s) en la lista anterior
+                    ({{ $antes }} → {{ $despues }}).
+                </div>
+            @elseif($diff < 0)
+                <div class="mb-4 p-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-xl text-sm">
+                     La nueva lista tiene <strong>{{ abs($diff) }}</strong> alumno(s) menos que la anterior
+                    ({{ $antes }} → {{ $despues }}).
+                </div>
+            @endif
         @endif
 
         @if(session('error'))

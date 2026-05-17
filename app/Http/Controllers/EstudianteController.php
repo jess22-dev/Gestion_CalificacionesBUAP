@@ -6,6 +6,7 @@ use App\Models\Estudiante;
 use App\Models\Materia;
 use App\Models\User;
 use App\Imports\EstudiantesImport;
+use App\Imports\HtmImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -222,50 +223,101 @@ class EstudianteController extends Controller
     }
 
     /**
-     * Procesar archivo Excel/CSV
+     * Procesar importación HTM oficial BUAP
+     * Detecta nuevos alumnos y alumnos que ya no aparecen en el HTM
      */
     public function import(Request $request)
     {
         $nrc = $request->input('nrc');
 
         $request->validate([
-            'archivo' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
-            'nrc'     => ['required', 'string'],
+            'archivo_htm' => ['required', 'file', 'mimes:htm,html', 'max:10240'],
+            'nrc'         => ['required', 'string'],
+        ], [
+            'archivo_htm.required' => 'El archivo HTM de la lista oficial es obligatorio.',
+            'archivo_htm.mimes'    => 'El archivo debe ser .htm o .html (descargado del SIIAA BUAP).',
         ]);
 
         $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
 
         try {
-            $import = new EstudiantesImport($nrc);
-            Excel::import($import, $request->file('archivo'));
+            $htmContent = file_get_contents($request->file('archivo_htm')->getRealPath());
 
+            // Alumnos actualmente en la materia ANTES de importar
+            $activos = $materia->estudiantes()->wherePivot('status', 'activo')->get();
+            $totalAntes = $activos->count();
+
+            $import = new HtmImport($nrc);
+            $import->procesar($htmContent);
+
+            $importados      = $import->totalImportados();
             $duplicados      = $import->getDuplicados();
             $yaEnOtraMateria = $import->getYaEnOtraMateria();
-            $importados      = $import->getImportados();
+            $codigosHtm      = $import->getCodigosHtm();
 
-            if ($importados === 0 && count($duplicados) > 0) {
+            // Detectar alumnos que ya no aparecen en el nuevo HTM
+            $faltantes = $activos->filter(function ($estudiante) use ($codigosHtm) {
+                return $estudiante->codigo_estudiante &&
+                       !in_array($estudiante->codigo_estudiante, $codigosHtm);
+            })->map(fn($e) => [
+                'id'     => $e->id,
+                'nombre' => $e->nombre,
+                'codigo' => $e->codigo_estudiante,
+            ])->values()->toArray();
+
+            // Total después de importar
+            $totalDespues = $materia->estudiantes()->wherePivot('status', 'activo')->count();
+
+            // Construir mensaje
+            if ($importados === 0 && count($duplicados) > 0 && count($faltantes) === 0) {
                 return redirect()->route('profesor.estudiantes.import', ['nrc' => $nrc])
-                    ->with('warning', 'No se agregó ningún estudiante. Todos ya están en esta materia.')
+                    ->with('warning', 'No se agregó ningún estudiante nuevo. Todos ya estaban en esta materia.')
                     ->with('duplicados', $duplicados);
             }
 
-            $msg = "Se importaron {$importados} estudiante(s) correctamente.";
-
-            if (count($duplicados) > 0) {
-                return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
-                    ->with('warning', $msg . ' ' . count($duplicados) . ' ya existían en esta materia.')
-                    ->with('duplicados', $duplicados)
-                    ->with('yaEnOtraMateria', $yaEnOtraMateria);
+            $msg = '';
+            if ($importados > 0) {
+                $msg = " Se agregaron {$importados} estudiante(s) nuevo(s).";
+            } elseif ($totalDespues === $totalAntes) {
+                $msg = "La lista está actualizada. No hubo cambios en el número de alumnos.";
             }
 
             return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
-                ->with('success', $msg)
-                ->with('yaEnOtraMateria', $yaEnOtraMateria);
+                ->with('success', $msg ?: "Importación completada.")
+                ->with('duplicados', $duplicados)
+                ->with('yaEnOtraMateria', $yaEnOtraMateria)
+                ->with('faltantes', $faltantes)
+                ->with('total_antes', $totalAntes)
+                ->with('total_despues', $totalDespues)
+                ->with('nrc_import', $nrc);
 
         } catch (\Exception $e) {
             return redirect()->route('profesor.estudiantes.import', ['nrc' => $nrc])
                 ->with('error', 'Error al procesar el archivo: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Dar de baja a alumnos que ya no aparecen en el HTM
+     */
+    public function bajaFaltantes(Request $request)
+    {
+        $nrc = $request->input('nrc');
+        $ids = $request->input('ids', []);
+
+        $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
+
+        $dados_baja = 0;
+        foreach ($ids as $id) {
+            $estudiante = Estudiante::find($id);
+            if ($estudiante && $estudiante->estaEnMateria($nrc)) {
+                $estudiante->materias()->updateExistingPivot($nrc, ['status' => 'baja']);
+                $dados_baja++;
+            }
+        }
+
+        return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
+            ->with('success', "Se dieron de baja {$dados_baja} alumno(s) que ya no aparecen en la lista oficial.");
     }
 
     /**

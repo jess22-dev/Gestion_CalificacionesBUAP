@@ -268,43 +268,116 @@
             });
         };
 
-        // ─── ESCANEAR QR ────────────────────────────────────────
+        // ─── ESCANEAR QR (Con delay de 5s entre lecturas) ──
+        let html5QrCode  = null;
+        let scannerActivo = false;
+
         document.getElementById('btnQR').addEventListener('click', function () {
             if (!asistenciaActiva) return;
-            const readerDiv = document.getElementById('reader');
-            const resultado = document.getElementById('qr_resultado');
-            readerDiv.classList.remove('hidden');
 
-            const html5QrCode = new Html5Qrcode('reader');
-            Html5Qrcode.getCameras().then(devices => {
-                if (!devices || !devices.length) { alert('No se encontró cámara'); return; }
-                html5QrCode.start(devices[0].id, { fps: 10, qrbox: 250 }, (decodedText) => {
-                    html5QrCode.stop();
-                    readerDiv.classList.add('hidden');
+            if (scannerActivo) {
+                // Si ya está activo, detenerlo
+                detenerScanner();
+                return;
+            }
 
-                    fetch('/asistencia/qr', {
-                        method: 'POST', headers,
-                        body: JSON.stringify({ qr_data: decodedText, materia_nrc })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            resultado.className = 'p-3 rounded-xl text-sm font-bold bg-green-100 text-green-800 mt-2';
-                            resultado.innerHTML = ` Presente: ${data.nombre ?? ''}`;
-                            aplicarEstatus(data.codigo, 'presente',
-                                new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
-                            actualizarContadores();
-                        } else {
-                            resultado.className = 'p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700 mt-2';
-                            resultado.innerHTML = ` ${data.error ?? 'Error desconocido'}`;
-                        }
-                        resultado.classList.remove('hidden');
-                    });
-                });
-            }).catch(() => alert('No se pudo acceder a la cámara'));
+            iniciarScanner();
         });
 
-        // ─── CICLAR ESTATUS AL HACER CLICK ──────────────────────
+        function iniciarScanner() {
+            const readerDiv = document.getElementById('reader');
+            const resultado = document.getElementById('qr_resultado');
+            const btnQR     = document.getElementById('btnQR');
+
+            readerDiv.classList.remove('hidden');
+            scannerActivo = true;
+            btnQR.textContent = 'Detener Cámara ';
+            btnQR.className = btnQR.className.replace('bg-[#002d62]', 'bg-red-600').replace('hover:bg-[#1e4b8a]', 'hover:bg-red-700');
+
+            html5QrCode = new Html5Qrcode('reader');
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (!devices || !devices.length) {
+                    alert('No se encontró cámara');
+                    detenerScanner();
+                    return;
+                }
+
+                html5QrCode.start(
+                    devices[0].id,
+                    { fps: 10, qrbox: 250 },
+                    (decodedText) => {
+                        // Pausar temporalmente el scanner para evitar lecturas múltiples
+                        html5QrCode.pause(true);
+
+                        fetch('/asistencia/qr', {
+                            method: 'POST', headers,
+                            body: JSON.stringify({ qr_data: decodedText, materia_nrc })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                resultado.className = 'p-3 rounded-xl text-sm font-bold bg-green-100 text-green-800 mt-2';
+                                resultado.innerHTML = ` Presente: ${data.nombre ?? ''}`;
+                                aplicarEstatus(data.codigo, 'presente',
+                                    new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+                                actualizarContadores();
+                            } else {
+                                resultado.className = 'p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700 mt-2';
+                                resultado.innerHTML = ` ${data.error ?? 'Error desconocido'}`;
+                            }
+                            resultado.classList.remove('hidden');
+
+                            // Mostrar cuenta regresiva de 5 segundos
+                            let seg = 5;
+                            const intervaloDelay = setInterval(() => {
+                                resultado.innerHTML = resultado.innerHTML.replace(/\s*\(\d+s\)$/, '');
+                                resultado.innerHTML += ` (${seg}s)`;
+                                seg--;
+                                if (seg < 0) {
+                                    clearInterval(intervaloDelay);
+                                    // Reanudar el scanner después del delay
+                                    if (scannerActivo && html5QrCode) {
+                                        html5QrCode.resume();
+                                        resultado.classList.add('hidden');
+                                    }
+                                }
+                            }, 1000);
+                        })
+                        .catch(() => {
+                            resultado.className = 'p-3 rounded-xl text-sm font-bold bg-red-100 text-red-700 mt-2';
+                            resultado.innerHTML = '❌ Error al registrar asistencia';
+                            resultado.classList.remove('hidden');
+                            setTimeout(() => {
+                                if (scannerActivo && html5QrCode) html5QrCode.resume();
+                            }, 5000);
+                        });
+                    }
+                );
+            }).catch(() => {
+                alert('No se pudo acceder a la cámara');
+                detenerScanner();
+            });
+        }
+
+        function detenerScanner() {
+            const readerDiv = document.getElementById('reader');
+            const btnQR     = document.getElementById('btnQR');
+
+            if (html5QrCode) {
+                html5QrCode.stop().catch(() => {});
+                html5QrCode = null;
+            }
+
+            scannerActivo = false;
+            readerDiv.classList.add('hidden');
+            readerDiv.innerHTML = '';
+
+            btnQR.textContent = 'Escanear QR 📷';
+            btnQR.className = btnQR.className.replace('bg-red-600', 'bg-[#002d62]').replace('hover:bg-red-700', 'hover:bg-[#1e4b8a]');
+        }
+
+        // ─── Ciclamos el estatus al hacer click ──────────────────────
         window.ciclarEstatus = function(btn) {
             const actual  = btn.dataset.estatus;
             const sig     = ESTATUS[actual].next;

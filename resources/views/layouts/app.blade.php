@@ -4,7 +4,6 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -15,24 +14,44 @@
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
-            
+            @php
+                $noLeidas = auth()->check()
+                    ? auth()->user()->notificaciones()->where('leida', false)->count()
+                    : 0;
+            @endphp
+
             @isset($header)
                 <header class="bg-[#002d62] shadow-lg border-b border-blue-800">
                     <div class="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                        
+
                         <div class="flex items-center space-x-4">
                             <img src="{{ asset('img/escudo_buap_b.png') }}" alt="BUAP" class="h-12 w-auto filter brightness-0 invert">
-                            
+
                             <h2 class="font-bold text-xl text-white leading-tight">
                                 {{ $header }}
                             </h2>
                         </div>
 
-                        <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            <x-dropdown align="right" width="48">
+                        <div class="hidden sm:flex sm:items-center sm:ms-6 gap-3">
+                            @auth
+                                <a href="{{ route('notificaciones.index') }}"
+                                   class="inline-flex items-center gap-2 px-3 py-2 text-sm leading-4 font-bold rounded-md text-white bg-[#1e4b8a] hover:bg-[#2a5fa6] focus:outline-none transition ease-in-out duration-150 shadow-sm">
+                                    <span>Notificaciones</span>
+
+                                    @if($noLeidas > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-2 text-xs font-black text-white bg-red-500 rounded-full">
+                                            {{ $noLeidas }}
+                                        </span>
+                                    @endif
+                                </a>
+                            @endauth
+
+                            <x-dropdown align="right" width="56">
                                 <x-slot name="trigger">
                                     <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-bold rounded-md text-white bg-[#1e4b8a] hover:bg-[#2a5fa6] focus:outline-none transition ease-in-out duration-150 shadow-sm">
-                                        <div>{{ Auth::user()->name }}</div>
+                                        <div>
+                                            {{ Auth::user()->name }}
+                                        </div>
 
                                         <div class="ms-1">
                                             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -43,6 +62,15 @@
                                 </x-slot>
 
                                 <x-slot name="content">
+                                    <x-dropdown-link :href="route('notificaciones.index')" class="font-semibold">
+                                        {{ __('Notificaciones') }}
+                                        @if($noLeidas > 0)
+                                            <span class="ml-2 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1 text-xs font-black text-white bg-red-500 rounded-full">
+                                                {{ $noLeidas }}
+                                            </span>
+                                        @endif
+                                    </x-dropdown-link>
+
                                     <x-dropdown-link :href="route('profile.edit')" class="font-semibold">
                                         {{ __('Mi Perfil') }}
                                     </x-dropdown-link>
@@ -50,8 +78,7 @@
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <x-dropdown-link :href="route('logout')"
-                                                onclick="event.preventDefault();
-                                                            this.closest('form').submit();"
+                                                onclick="event.preventDefault(); this.closest('form').submit();"
                                                 class="text-red-600 font-bold">
                                             {{ __('Cerrar Sesión') }}
                                         </x-dropdown-link>
@@ -61,6 +88,17 @@
                         </div>
 
                         <div class="-me-2 flex items-center sm:hidden">
+                            @auth
+                                <a href="{{ route('notificaciones.index') }}"
+                                   class="mr-2 inline-flex items-center justify-center p-2 rounded-md text-white bg-[#1e4b8a] hover:bg-[#2a5fa6] transition">
+                                    @if($noLeidas > 0)
+                                        <span class="ml-1 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[10px] font-black text-white bg-red-500 rounded-full">
+                                            {{ $noLeidas }}
+                                        </span>
+                                    @endif
+                                </a>
+                            @endauth
+
                             <button class="text-white p-2 focus:outline-none">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>

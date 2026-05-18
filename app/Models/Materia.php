@@ -22,14 +22,14 @@ class Materia extends Model
         return $this->belongsTo(User::class, 'profesor_id');
     }
 
-    // Alumnos del sistema antiguo (users con rol alumno)
+    // Alumnos del sistema antiguo (users con rol alumno) via alumno_materia
     public function alumnos()
     {
         return $this->belongsToMany(User::class, 'alumno_materia', 'materia_nrc', 'alumno_id')
                     ->withTimestamps();
     }
 
-    // Estudiantes del nuevo módulo de alta
+    // Estudiantes del módulo de alta (tabla materia_estudiante)
     public function estudiantes()
     {
         return $this->belongsToMany(
@@ -39,8 +39,9 @@ class Materia extends Model
             'estudiante_id',
             'nrc',
             'id'
-        )->withPivot('profesor_id', 'status')
-         ->withTimestamps();
+        )
+        ->withPivot('status', 'profesor_id')
+        ->withTimestamps();
     }
 
     // Estudiantes activos de esta materia

@@ -65,15 +65,16 @@
         <div class="bg-white rounded-xl shadow p-6 mb-4">
             <h3 class="text-lg font-bold text-gray-800 mb-1">Importar desde Lista Oficial BUAP</h3>
             <p class="text-sm text-gray-500 mb-6">
-                Sube el archivo HTM descargado del SIIAA para importar la lista oficial de alumnos.
+                Sube el archivo HTM descargado del AutoServicios para importar la lista oficial de alumnos.
             </p>
 
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 mb-6">
-                <p class="font-black mb-2"> Lista Oficial BUAP</p>
+                <p class="font-black mb-2"> Observaciones</p>
                 <ul class="list-disc list-inside space-y-1 text-xs">
-                    <li>Descárgalo del SIIAA → Servicios a Docentes → Lista de Clase</li>
-                    <li>Contiene los alumnos <strong>oficialmente inscritos</strong></li>
-                    <li>Formato .htm o .html</li>
+                    <li>El archivo se descarga desde AutoServicios.</li>
+                    <li>Se tomara de aqui a los alumnos <strong>inscritos y originarios de la BUAP. </strong></li>
+                    <li>Los estudiantes extranjeros o de intercambio <strong>no se veran reflejados en dicha lista. </strong></li>
+                    <li>El formato debe de ser .htm o .html.</li>
                 </ul>
             </div>
 

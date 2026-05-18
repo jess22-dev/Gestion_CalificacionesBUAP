@@ -24,7 +24,7 @@
                     <span class="text-sm text-gray-800">{{ $estudiante->email }}</span>
                 </div>
                 <div class="flex justify-between border-b border-gray-100 pb-3">
-                    <span class="text-sm font-semibold text-gray-500">Código de estudiante</span>
+                    <span class="text-sm font-semibold text-gray-500">Matrícula</span>
                     <span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded">
                         {{ $estudiante->codigo_estudiante }}
                     </span>

@@ -101,7 +101,7 @@
                 </ul>
 
                 <div class="flex gap-3 ml-8">
-                    {{-- Sí, dar de baja --}}
+                    {{-- Sí, dar de baja -- }}
                     <form method="POST" action="{{ route('profesor.estudiantes.baja.faltantes') }}">
                         @csrf
                         <input type="hidden" name="nrc" value="{{ session('nrc_import') }}">
@@ -159,11 +159,11 @@
             <div class="flex gap-2">
                 <a href="{{ route('profesor.estudiantes.create', ['nrc' => $nrc]) }}"
                    class="inline-flex items-center px-4 py-2 bg-[#002d62] text-white text-sm font-semibold rounded-lg hover:bg-[#1e4b8a] transition">
-                    + Agregar manual
+                     Agregar manualmente
                 </a>
                 <a href="{{ route('profesor.estudiantes.import', ['nrc' => $nrc]) }}"
                    class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
-                    ↑ Importar Excel / CSV
+                     Importar HTM
                 </a>
             </div>
         </div>

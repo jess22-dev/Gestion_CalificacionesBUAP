@@ -302,22 +302,52 @@ class EstudianteController extends Controller
      */
     public function bajaFaltantes(Request $request)
     {
-        $nrc = $request->input('nrc');
-        $ids = $request->input('ids', []);
+        $nrc        = $request->input('nrc');
+        $decisiones = $request->input('decisiones', []); // [ codigo => 'mantener'|'baja' ]
 
         $materia = Materia::where('nrc', $nrc)->where('profesor_id', Auth::id())->firstOrFail();
 
         $dados_baja = 0;
-        foreach ($ids as $id) {
-            $estudiante = Estudiante::find($id);
-            if ($estudiante && $estudiante->estaEnMateria($nrc)) {
-                $estudiante->materias()->updateExistingPivot($nrc, ['status' => 'baja']);
-                $dados_baja++;
+        $mantenidos = 0;
+
+        foreach ($decisiones as $codigo => $decision) {
+            $estudiante = Estudiante::where('codigo_estudiante', $codigo)->first();
+            if (!$estudiante) continue;
+
+            if ($decision === 'baja') {
+                if ($estudiante->estaEnMateria($nrc)) {
+                    $estudiante->materias()->updateExistingPivot($nrc, ['status' => 'baja']);
+                    $dados_baja++;
+                }
+            } elseif ($decision === 'mantener') {
+                // Crear entrada en calificaciones_finales para que aparezca en la tabla de actas
+                \App\Models\CalificacionFinal::firstOrCreate(
+                    [
+                        'materia_nrc'      => (string) $nrc,
+                        'email_alumno'     => strtolower(trim($estudiante->email)),
+                        'actividad_nombre' => 'DATOS_MANUALES',
+                    ],
+                    [
+                        'nombre_alumno'   => $estudiante->nombre,
+                        'puntaje'         => 0,
+                        'fecha_actividad' => now()->format('d/m/Y'),
+                    ]
+                );
+                $mantenidos++;
             }
         }
 
-        return redirect()->route('profesor.estudiantes.index', ['nrc' => $nrc])
-            ->with('success', "Se dieron de baja {$dados_baja} alumno(s) que ya no aparecen en la lista oficial.");
+        $msg = '';
+        if ($dados_baja > 0 && $mantenidos > 0) {
+            $msg = "Se dieron de baja {$dados_baja} alumno(s) y se mantuvieron {$mantenidos} alumno(s) en el acta.";
+        } elseif ($dados_baja > 0) {
+            $msg = "Se dieron de baja {$dados_baja} alumno(s).";
+        } else {
+            $msg = "Se mantuvieron {$mantenidos} alumno(s) en el acta sin cambios.";
+        }
+
+        return redirect()->route('profesor.actas.index', ['nrc' => $nrc])
+            ->with('success', $msg);
     }
 
     /**

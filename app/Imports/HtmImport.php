@@ -89,10 +89,39 @@ class HtmImport
         if (!$existente && $email) $existente = Estudiante::where('email', $email)->first();
 
         if ($existente) {
-            if ($existente->estaEnMateria($this->materiaNrc)) {
-                $this->duplicados[] = ['nombre' => $existente->nombre, 'codigo' => $existente->codigo_estudiante];
-                return;
+            // Verificar si ya está en la materia y con qué status
+            $pivot = $existente->materias()
+                ->where('materia_nrc', $this->materiaNrc)
+                ->first();
+
+            if ($pivot) {
+                if ($pivot->pivot->status === 'activo') {
+                    // Ya está activo -> duplicado, no hacer nada
+                    $this->duplicados[] = ['nombre' => $existente->nombre, 'codigo' => $existente->codigo_estudiante];
+                    return;
+                } else {
+                    // Estaba dado de baja -> reactivar
+                    $existente->materias()->updateExistingPivot($this->materiaNrc, [
+                        'status' => 'activo',
+                    ]);
+
+                    // Reactivar también en alumno_materia si existe
+                    if ($email) {
+                        $user = User::where('email', $email)->first();
+                        if ($user) {
+                            DB::table('alumno_materia')
+                                ->where('alumno_id', $user->id)
+                                ->where('materia_nrc', $this->materiaNrc)
+                                ->update(['status' => 'activo', 'fecha_baja' => null]);
+                        }
+                    }
+
+                    $this->importados[] = $existente->nombre;
+                    return;
+                }
             }
+
+            // No está en esta materia -> verificar si está en otra
             if ($existente->estaEnOtraMateria($this->materiaNrc)) {
                 $this->yaEnOtraMateria[] = ['nombre' => $existente->nombre];
             }

@@ -2,74 +2,65 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Notificacion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * Los atributos que se pueden llenar masivamente.
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role', 
+        'role',
     ];
 
-    /**
-     * Atributos ocultos para la serialización.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Casts de atributos.
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
-    // --- RELACIONES PARA EL SISTEMA BUAP ---
-
-    /**
-     * Relación para el PROFESOR:
-     * Un usuario (profesor) tiene muchas materias asignadas.
-     */
+    // Profesor → muchas materias
     public function grupos()
     {
-        // Se asume que en la tabla 'materias' hay una columna 'profesor_id'
         return $this->hasMany(Materia::class, 'profesor_id');
     }
 
-    /**
-     * Relación para el ALUMNO:
-     * Un usuario (alumno) pertenece a muchas materias a través de la tabla pivote.
-     * Cambiamos el nombre a 'materias' para que coincida con el AlumnoController.
-     */
+    // Alumno → muchas materias via alumno_materia
     public function materias()
     {
-        return $this->belongsToMany(Materia::class, 'alumno_materia', 'alumno_id', 'materia_nrc')
-                    ->withPivot([
-                        'clave_unica',
-                        'clave_asistencia',
-                        'promedio_real', 
-                        'promedio_redondeado', 
-                        'status', 
-                        'qr_path', 
-                        'fecha_baja'
-                    ])
-                    ->withTimestamps();
+        return $this->belongsToMany(
+            Materia::class,
+            'alumno_materia',
+            'alumno_id',
+            'materia_nrc',
+            'id',
+            'nrc'
+        )->withPivot(
+            'clave_unica',
+            'clave_asistencia',
+            'status',
+            'qr_path',
+            'fecha_baja',
+            'promedio_real',
+            'promedio_redondeado'
+        )->withTimestamps();
+    }
+
+    // Notificaciones del usuario
+    public function notificaciones()
+    {
+        return $this->hasMany(Notificacion::class)->latest();
     }
 }

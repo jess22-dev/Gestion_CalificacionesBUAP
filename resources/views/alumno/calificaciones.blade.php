@@ -23,6 +23,35 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if(session('error'))
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-800 rounded-xl">
+                     {{ session('error') }}
+                </div>
+            @endif
+
+
+
+
+
+            <div class="mb-4">
+                <a href="{{ route('alumno.materia.detalle', $materia->nrc) }}"
+                class="inline-flex items-center gap-2 text-[#002d62] font-bold hover:underline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Volver al detalle de la materia
+                </a>
+            </div>
+
+
+
+
+
+
+
+
+
+
 
 
             {{-- Resumen de promedio --}}
@@ -77,6 +106,22 @@
                                         <p class="text-gray-300 text-sm italic">Sin calificar</p>
                                     @endif
                                 </div>
+                            </div>
+
+                            {{-- Solo estado de entrega (sin acciones) --}}
+                            <div class="px-5 py-3 bg-gray-50 flex items-center gap-3">
+                                @if($entregado)
+                                    <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
+                                         Entregado
+                                    </span>
+                                    @if($archivo)
+                                        <span class="text-xs text-gray-400 italic">{{ $archivo }}</span>
+                                    @endif
+                                @else
+                                    <span class="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full">
+                                         Pendiente de entrega
+                                    </span>
+                                @endif
                             </div>
                         </div>
                     @endforeach

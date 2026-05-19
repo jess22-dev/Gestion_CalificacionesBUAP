@@ -211,6 +211,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // 3. Exportar Excel
             Route::post('/exportar', [ActasController::class, 'exportar'])->name('profesor.actas.exportar');
 
+            Route::post('/exportar-oficial/', [ActasController::class, 'exportarOficial'])
+            ->name('profesor.actas.exportar_oficial');
+
             // 4. Eliminar actividad
             Route::delete('/eliminar-actividad/{actividad}', [ActasController::class, 'eliminarActividad'])
                 ->name('profesor.actas.eliminarActividad');

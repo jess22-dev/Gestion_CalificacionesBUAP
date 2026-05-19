@@ -19,126 +19,185 @@ class ActaExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     protected $actividades;
     protected $materia;
 
+    // Pesos (deben coincidir con los valores por defecto del frontend)
+    protected $wPart  = 0.10;
+    protected $wTeams = 0.30; // tareas + prácticas juntas
+    protected $wProy  = 0.40;
+    protected $wExam  = 0.20;
+
     public function __construct($alumnos, $actividades, $materia)
     {
-        $this->alumnos = $alumnos;
+        $this->alumnos     = $alumnos;
         $this->actividades = $actividades;
-        $this->materia = $materia;
+        $this->materia     = $materia;
     }
 
     public function collection()
     {
-        return collect($this->alumnos);
+        return collect($this->alumnos)->values(); // reindexar para que el #fila sea correcto
     }
 
     public function headings(): array
     {
-        $filaBase = ['Nombre del Alumno', 'Correo'];
-        
-        // Columnas de Teams (Dinámicas)
-        $teamsHeaders = $this->actividades;
-
-        // Columnas Finales (Manuales y Cálculos)
-        $filaFinal = [
-            'PART (10%)', 
-            'PROY (40%)', 
-            'EXAM U1', 
-            'EXAM U2-U3', 
-            'RECUP U1', 
-            'Promedio Real', 
-            'Final Acta'
+        $base = [
+            '#',
+            'Nombre del Alumno',
+            'ID (Matrícula)',
+            'Participaciones',
         ];
 
-        return array_merge($filaBase, $teamsHeaders, $filaFinal);
+        // Columnas dinámicas de actividades
+        $actividades = array_values($this->actividades);
+
+        $finales = [
+            'Proyecto',
+            'Unidad 1',
+            'Unidad 2 y 3',
+            'Recuperación U1',
+            'Calificación',
+            'Final',
+        ];
+
+        return array_merge($base, $actividades, $finales);
     }
 
+    // -------------------------------------------------------------------------
+    // MAPEO DE FILAS
+    // -------------------------------------------------------------------------
     public function map($alumno): array
     {
-        // 1. Datos base
-        $mapeo = [
-            $alumno['nombre'],
-            $alumno['email'],
+        static $numero = 0;
+        $numero++;
+
+        // — Columnas fijas —
+        $fila = [
+            $numero,                                          // A  #
+            $alumno['nombre'],                               // B  Nombre
+            $alumno['email'] ?? '',                          // C  ID / Matrícula
+            (float)($alumno['manual']['participacion'] ?? 0), // D  Participaciones
         ];
 
-        // 2. Notas de Teams
+        // — Columnas dinámicas de actividades —
         foreach ($this->actividades as $actividad) {
-            $mapeo[] = $alumno['notas_teams'][$actividad] ?? 0;
+            $fila[] = (float)($alumno['notas'][$actividad] ?? $alumno['notas_teams'][$actividad] ?? 0);
         }
 
-        // 3. Datos manuales en orden
-        $mapeo[] = $alumno['manual']['participacion'];
-        $mapeo[] = $alumno['manual']['proyecto'];
-        $mapeo[] = $alumno['manual']['examen_u1'];
-        $mapeo[] = $alumno['manual']['examen_u2_u3'];
-        
-        $recup = $alumno['manual']['recuperacion_u1'];
-        $mapeo[] = ($recup !== null && $recup !== '') ? $recup : '-';
+        // — Datos manuales finales —
+        $proyecto  = (float)($alumno['manual']['proyecto']      ?? 0);
+        $u1        = (float)($alumno['manual']['examen_u1']     ?? 0);
+        $u2u3      = (float)($alumno['manual']['examen_u2_u3']  ?? 0);
+        $recupRaw  = $alumno['manual']['recuperacion_u1'] ?? null;
+        $recup     = ($recupRaw !== null && $recupRaw !== '') ? (float)$recupRaw : null;
 
-        // --- LÓGICA DE CÁLCULO (Sincronizada con ActaApp.js) ---
-        
-        // A. Promedio Teams (30%)
-        $promTeams = count($alumno['notas_teams']) > 0 
-            ? array_sum($alumno['notas_teams']) / count($alumno['notas_teams']) 
-            : 0;
+        $fila[] = $proyecto;                                           // Proyecto
+        $fila[] = $u1;                                                 // Unidad 1
+        $fila[] = $u2u3;                                               // Unidad 2 y 3
+        $fila[] = ($recup !== null) ? $recup : '-';                    // Recuperación U1
 
-        // B. Promedio Exámenes (20%) - Lógica de Recuperación
-        $notaU1Efectiva = ($recup !== null && $recup !== '') ? (float)$recup : (float)$alumno['manual']['examen_u1'];
-        $promExamen = ($notaU1Efectiva + (float)$alumno['manual']['examen_u2_u3']) / 2;
+        // — Cálculo sincronizado con el frontend —
 
-        // C. Calificación Final con Pesos Oficiales
-        $final = ($alumno['manual']['participacion'] * 0.10) + 
-                 ($promTeams * 0.30) + 
-                 ($alumno['manual']['proyecto'] * 0.40) + 
-                 ($promExamen * 0.20);
+        // Promedio de actividades (tareas + prácticas mezcladas)
+        $notas = [];
+        foreach ($this->actividades as $actividad) {
+            $notas[] = (float)($alumno['notas'][$actividad] ?? $alumno['notas_teams'][$actividad] ?? 0);
+        }
+        $promActividades = count($notas) > 0 ? array_sum($notas) / count($notas) : 0;
 
-        // D. Redondeo BUAP
-        // 5.5 a 5.9 -> 5. 6.0+ -> Redondeo normal.
-        $redondeado = ($final >= 5.5 && $final < 6.0) ? 5 : round($final);
+        // U1 efectiva (recuperación sustituye si existe)
+        $u1Efectiva = ($recup !== null) ? $recup : $u1;
 
-        $mapeo[] = round($final, 2); // Columna Promedio Real
-        $mapeo[] = $redondeado;      // Columna Final Acta
+        // Promedio exámenes
+        $promExamen = ($u1Efectiva + $u2u3) / 2;
 
-        return $mapeo;
+        // Calificación sin redondear
+        $participacion = (float)($alumno['manual']['participacion'] ?? 0);
+        $calificacion  = ($participacion * $this->wPart)
+                       + ($promActividades * $this->wTeams)
+                       + ($proyecto        * $this->wProy)
+                       + ($promExamen      * $this->wExam);
+
+        $calificacion = round($calificacion, 2);
+
+        // Redondeo BUAP: 5.5–5.9 → 5, resto → round()
+        $final = ($calificacion >= 5.5 && $calificacion < 6.0) ? 5 : (int)round($calificacion);
+
+        $fila[] = $calificacion; // Calificación (sin redondear)
+        $fila[] = $final;        // Final
+
+        return $fila;
     }
 
+    // -------------------------------------------------------------------------
+    // ESTILOS
+    // -------------------------------------------------------------------------
     public function styles(Worksheet $sheet)
     {
         return [
-            // Estilo para el encabezado
+            // Encabezado (fila 1)
             1 => [
-                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'font' => [
+                    'bold'  => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                    'size'  => 11,
+                ],
                 'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '002d62'], // Azul BUAP
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '002d62'],
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical'   => Alignment::VERTICAL_CENTER,
+                    'wrapText'   => true,
                 ],
             ],
         ];
     }
 
+    // -------------------------------------------------------------------------
+    // EVENTOS POST-GENERACIÓN
+    // -------------------------------------------------------------------------
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function(AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet      = $event->sheet->getDelegate();
                 $highestRow = $sheet->getHighestRow();
                 $highestCol = $sheet->getHighestColumn();
 
-                // Centrar todo excepto los nombres
-                $sheet->getStyle('C1:'.$highestCol.$highestRow)
-                      ->getAlignment()
-                      ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                // Altura de la fila de encabezado
+                $sheet->getRowDimension(1)->setRowHeight(30);
 
-                // Formato condicional simple: poner en rojo los reprobados en la última columna
+                // Centrar todo el contenido excepto Nombre (col B) y ID (col C)
+                $sheet->getStyle('A1:' . $highestCol . $highestRow)
+                      ->getAlignment()
+                      ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                      ->setVertical(Alignment::VERTICAL_CENTER);
+
+                // Alinear Nombre e ID a la izquierda
+                $sheet->getStyle('B2:B' . $highestRow)
+                      ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                $sheet->getStyle('C2:C' . $highestRow)
+                      ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                // Formato condicional: reprobados en rojo (columna Final = última)
                 for ($row = 2; $row <= $highestRow; $row++) {
                     $cellValue = $sheet->getCell($highestCol . $row)->getValue();
                     if (is_numeric($cellValue) && $cellValue < 6) {
-                        $sheet->getStyle($highestCol . $row)->getFont()->getColor()->setRGB('FF0000');
-                        $sheet->getStyle($highestCol . $row)->getFont()->setBold(true);
+                        $sheet->getStyle($highestCol . $row)
+                              ->getFont()
+                              ->getColor()->setRGB('CC0000');
+                        $sheet->getStyle($highestCol . $row)
+                              ->getFont()->setBold(true);
                     }
                 }
+
+                // Bordes en toda la tabla
+                $sheet->getStyle('A1:' . $highestCol . $highestRow)
+                      ->getBorders()->getAllBorders()
+                      ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                // Columna # más estrecha
+                $sheet->getColumnDimension('A')->setWidth(6);
             },
         ];
     }

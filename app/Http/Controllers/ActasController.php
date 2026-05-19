@@ -188,8 +188,55 @@ class ActasController extends Controller
             "Acta_Final_{$nrc}.xlsx"
         );
     }
+    public function exportarOficial(Request $request, $nrc)
+    {
+        // 1. Obtener datos base
+        $materia = Materia::where('nrc', $nrc)->firstOrFail();
+        $todasLasNotas = CalificacionFinal::where('materia_nrc', (string)$nrc)->get();
 
-    // NUEVO MÉTODO PARA ELIMINAR UNA ACTIVIDAD 
+        // 2. Identificar actividades para el promedio (necesario para el cálculo final)
+        $listaActividades = $todasLasNotas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
+                                        ->pluck('actividad_nombre')
+                                        ->unique()
+                                        ->values()
+                                        ->toArray();
+
+        $datosAlumnosFlat = [];
+        $notasAgrupadas = $todasLasNotas->groupBy('email_alumno');
+
+        // 3. Procesar datos
+        foreach ($notasAgrupadas as $correo => $items) {
+            $manual = $items->firstWhere('actividad_nombre', 'DATOS_MANUALES');
+            
+            $fila = [
+                'nombre' => $items->first()->nombre_alumno,
+                'email'  => $correo,
+                'notas_teams' => [], 
+                'manual' => [
+                    'participacion'   => $manual->participacion ?? 0,
+                    'proyecto'        => $manual->proyecto ?? 0,
+                    'examen_u1'       => $manual->examen_u1 ?? 0,
+                    'examen_u2_u3'    => $manual->examen_u2_u3 ?? 0,
+                    'recuperacion_u1' => $manual->recuperacion_u1 ?? null,
+                ]
+            ];
+
+            // Llenamos las notas de teams para que el Export pueda calcular el promedio
+            foreach ($listaActividades as $actividad) {
+                $nota = $items->firstWhere('actividad_nombre', $actividad);
+                $fila['notas_teams'][$actividad] = $nota->puntaje ?? 0;
+            }
+
+            $datosAlumnosFlat[] = $fila;
+        }
+
+        // 4. Descargar usando el Export Oficial (el de 3 columnas)
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ActaOficialExport($datosAlumnosFlat), 
+            "ACTA_OFICIAL_{$nrc}.xlsx"
+        );
+    }
+        // NUEVO MÉTODO PARA ELIMINAR UNA ACTIVIDAD 
     public function eliminarActividad($nrc, $actividad)
     {
         try {

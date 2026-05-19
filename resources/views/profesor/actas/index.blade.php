@@ -28,7 +28,7 @@
             </div>
 
 
-            {{-- ADVERTENCIA: Alumnos en HTM no encontrados en Excel --}}
+            {{-- ADVERTENCIA: Alumnos en HTM no encontrados en Excel Ver --}}
             @if(session('advertencia_faltantes'))
                 <div class="mb-6 bg-amber-50 border-2 border-amber-400 rounded-2xl p-6" id="bloque-faltantes">
                     <div class="flex items-start gap-4 mb-4">
@@ -97,6 +97,89 @@
                                     onclick="procederCambios()"
                                     class="bg-[#002d62] text-white px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-[#1e4b8a] transition shadow-lg">
                                 Proceder con los cambios →
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            @endif
+
+
+            {{-- ALUMNOS SIN MATRÍCULA DETECTADOS --}}
+            @if(session('sin_matricula_list') && count(session('sin_matricula_list')) > 0)
+                <div class="mb-6 bg-blue-50 border-2 border-blue-400 rounded-2xl p-6" id="bloque-sin-matricula">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="bg-blue-500 p-2 rounded-xl flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-blue-800 text-base uppercase tracking-wide">
+                                {{ count(session('sin_matricula_list')) }} alumno(s) sin matrícula vinculada
+                            </h3>
+                            <p class="text-blue-700 text-sm mt-1">
+                                Elige una acción para cada alumno y luego presiona <strong>"Proceder con los cambios"</strong>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form action="{{ route('profesor.actas.procesar_matriculas', $materia->nrc) }}" method="POST" id="form-matriculas">
+                        @csrf
+
+                        <div class="overflow-x-auto rounded-xl border border-blue-200">
+                            <table class="w-full text-sm">
+                                <thead class="bg-blue-100">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left font-black text-blue-800 uppercase text-xs">Nombre</th>
+                                        <th class="px-4 py-2 text-left font-black text-blue-800 uppercase text-xs">Correo</th>
+                                        <th class="px-4 py-2 text-center font-black text-blue-800 uppercase text-xs">Decisión</th>
+                                        <th class="px-4 py-2 text-center font-black text-blue-800 uppercase text-xs">Matrícula</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-blue-100 bg-white" id="tabla-matriculas">
+                                    @foreach(session('sin_matricula_list') as $alumno)
+                                        <tr class="transition" id="fila-mat-{{ $loop->index }}">
+                                            <td class="px-4 py-3 font-semibold text-gray-800">{{ $alumno['nombre'] }}</td>
+                                            <td class="px-4 py-3 text-gray-500 text-xs">{{ $alumno['email'] }}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <input type="hidden" name="decisiones[{{ $alumno['email'] }}][accion]" id="accion-mat-{{ $loop->index }}" value="">
+                                                <input type="hidden" name="decisiones[{{ $alumno['email'] }}][email]" value="{{ $alumno['email'] }}">
+                                                <div class="flex justify-center gap-2">
+                                                    <button type="button"
+                                                            onclick="elegirDecisionMatricula({{ $loop->index }}, 'asignar', '{{ addslashes($alumno['nombre']) }}')"
+                                                            id="btn-asignar-{{ $loop->index }}"
+                                                            class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-blue-700 bg-white border-blue-300 hover:bg-blue-100">
+                                                         Asignar matrícula
+                                                    </button>
+                                                    <button type="button"
+                                                            onclick="elegirDecisionMatricula({{ $loop->index }}, 'ignorar', '{{ addslashes($alumno['nombre']) }}')"
+                                                            id="btn-ignorar-{{ $loop->index }}"
+                                                            class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-gray-500 bg-white border-gray-300 hover:bg-gray-100">
+                                                         Ignorar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <input type="text"
+                                                       name="decisiones[{{ $alumno['email'] }}][codigo]"
+                                                       id="input-mat-{{ $loop->index }}"
+                                                       placeholder="000000000"
+                                                       maxlength="9"
+                                                       disabled
+                                                       class="w-32 text-center rounded-lg border-gray-300 text-sm font-mono focus:ring-blue-400 disabled:bg-gray-100 disabled:text-gray-400 transition">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- Botón proceder --}}
+                        <div class="mt-5 flex justify-end" id="contenedor-proceder-matriculas" hidden>
+                            <button type="button"
+                                    onclick="procederMatriculas()"
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition shadow-lg">
+                                Proceder con los cambios 
                             </button>
                         </div>
                     </form>
@@ -340,6 +423,71 @@
             }).then(() => console.log('✓'));
         }
 
+        // ── Lógica de decisiones para alumnos sin matrícula ──
+        const totalSinMatricula = document.querySelectorAll('[id^="accion-mat-"]').length;
+        let decisionesMatricula = {};
+
+        function elegirDecisionMatricula(index, tipo, nombre) {
+            decisionesMatricula[index] = tipo;
+
+            const btnAsignar = document.getElementById('btn-asignar-' + index);
+            const btnIgnorar = document.getElementById('btn-ignorar-' + index);
+            const inputMat   = document.getElementById('input-mat-' + index);
+            const accionHid  = document.getElementById('accion-mat-' + index);
+            const fila       = document.getElementById('fila-mat-' + index);
+
+            // Resetear estilos
+            btnAsignar.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-blue-700 bg-white border-blue-300 hover:bg-blue-100';
+            btnIgnorar.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-gray-500 bg-white border-gray-300 hover:bg-gray-100';
+            fila.classList.remove('bg-blue-50', 'bg-gray-50');
+
+            if (tipo === 'asignar') {
+                btnAsignar.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-blue-800 bg-blue-200 border-blue-400 ring-2 ring-blue-400';
+                fila.classList.add('bg-blue-50');
+                inputMat.disabled = false;
+                inputMat.focus();
+                accionHid.value = 'asignar';
+            } else {
+                btnIgnorar.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-gray-700 bg-gray-200 border-gray-400 ring-2 ring-gray-400';
+                fila.classList.add('bg-gray-50');
+                inputMat.disabled = true;
+                inputMat.value = '';
+                accionHid.value = 'ignorar';
+            }
+
+            if (Object.keys(decisionesMatricula).length === totalSinMatricula) {
+                document.getElementById('contenedor-proceder-matriculas').removeAttribute('hidden');
+            }
+        }
+
+        function procederMatriculas() {
+            // Validar que los que eligieron asignar tienen matrícula de 9 dígitos
+            let valido = true;
+            for (const [index, tipo] of Object.entries(decisionesMatricula)) {
+                if (tipo === 'asignar') {
+                    const input = document.getElementById('input-mat-' + index);
+                    if (!input || !/^\d{9}$/.test(input.value)) {
+                        alert('El alumno en la fila ' + (parseInt(index) + 1) + ' necesita una matrícula válida de 9 dígitos.');
+                        valido = false;
+                        break;
+                    }
+                }
+            }
+            if (!valido) return;
+
+            const asignar = Object.values(decisionesMatricula).filter(d => d === 'asignar').length;
+            const ignorar = Object.values(decisionesMatricula).filter(d => d === 'ignorar').length;
+
+            const msg = '¿Confirmas los siguientes cambios?\n\n' +
+                        ' Asignar matrícula: ' + asignar + ' alumno(s)\n' +
+                        ' Ignorar: ' + ignorar + ' alumno(s)\n\n' +
+                        'Esta acción no se puede deshacer.';
+
+            if (confirm(msg)) {
+                document.getElementById('form-matriculas').submit();
+            }
+        }
+
         // ── Lógica de decisiones para alumnos faltantes ──
         const totalFaltantes = document.querySelectorAll('[id^="decision-"]').length;
         let decisiones = {};
@@ -379,8 +527,8 @@
             const mantener = Object.values(decisiones).filter(d => d === 'mantener').length;
 
             const msg = '¿Confirmas los siguientes cambios?\n\n' +
-                        '✓ Mantener: ' + mantener + ' alumno(s)\n' +
-                        '✗ Dar de baja: ' + bajas + ' alumno(s)\n\n' +
+                        ' Mantener: ' + mantener + ' alumno(s)\n' +
+                        ' Dar de baja: ' + bajas + ' alumno(s)\n\n' +
                         'Esta acción no se puede deshacer.';
 
             if (confirm(msg)) {

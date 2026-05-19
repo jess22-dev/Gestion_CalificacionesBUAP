@@ -12,13 +12,15 @@ class CalificacionFinal extends Model
         'materia_nrc',
         'email_alumno',
         'nombre_alumno',
+        'codigo_estudiante',
+        'sin_matricula',
         'actividad_nombre',
         'puntaje',
         'fecha_actividad',
-        'participacion',  // Nuevo
-        'proyecto',       // Nuevo
-        'examen_u1',      // Nuevo
-        'examen_u2_u3',   // Nuevo
-        'recuperacion_u1' // Nuevo
+        'participacion',
+        'proyecto',
+        'examen_u1',
+        'examen_u2_u3',
+        'recuperacion_u1',
     ];
 }

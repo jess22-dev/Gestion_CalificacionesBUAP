@@ -68,6 +68,9 @@ class ActasController extends Controller
                 ];
             });
 
+        // Índice email => codigo_estudiante para cruce rápido
+        $indiceMatriculas = $alumnosHtm->pluck('codigo', 'email')->toArray();
+
         $seActualizo           = false;
         $actividadesProcesadas = [];
         $emailsEnExcel         = [];
@@ -105,6 +108,10 @@ class ActasController extends Controller
                     $puntajeTeams = is_numeric($valorCelda) ? floatval($valorCelda) : 0;
                     $notaFinal    = round($puntajeTeams * 10, 1);
 
+                    // Cruzar matrícula por email
+                    $codigoEstudiante = $indiceMatriculas[$correo] ?? null;
+                    $sinMatricula     = is_null($codigoEstudiante);
+
                     CalificacionFinal::updateOrCreate(
                         [
                             'materia_nrc'      => (string) $nrc,
@@ -112,9 +119,11 @@ class ActasController extends Controller
                             'actividad_nombre' => $actividad,
                         ],
                         [
-                            'nombre_alumno'   => $nombreAlumno,
-                            'puntaje'         => $notaFinal,
-                            'fecha_actividad' => now()->format('d/m/Y'),
+                            'nombre_alumno'     => $nombreAlumno,
+                            'codigo_estudiante' => $codigoEstudiante,
+                            'sin_matricula'     => $sinMatricula,
+                            'puntaje'           => $notaFinal,
+                            'fecha_actividad'   => now()->format('d/m/Y'),
                         ]
                     );
 
@@ -143,11 +152,31 @@ class ActasController extends Controller
             $this->notificarCalificacionesPublicadas($nrc, $actividadNombre);
         }
 
+        // ── Detectar alumnos sin matrícula en el acta ──
+        $sinMatriculaList = CalificacionFinal::where('materia_nrc', (string) $nrc)
+            ->where('sin_matricula', true)
+            ->select('email_alumno', 'nombre_alumno')
+            ->distinct()
+            ->get()
+            ->map(fn($r) => [
+                'email'  => $r->email_alumno,
+                'nombre' => $r->nombre_alumno,
+            ])->toArray();
+
         if (!empty($faltantesEnExcel)) {
             return redirect()
                 ->route('profesor.actas.index', $nrc)
                 ->with('success', 'Calificaciones actualizadas.')
                 ->with('advertencia_faltantes', $faltantesEnExcel)
+                ->with('nrc_faltantes', $nrc)
+                ->with('sin_matricula_list', $sinMatriculaList);
+        }
+
+        if (!empty($sinMatriculaList)) {
+            return redirect()
+                ->route('profesor.actas.index', $nrc)
+                ->with('success', 'Calificaciones actualizadas.')
+                ->with('sin_matricula_list', $sinMatriculaList)
                 ->with('nrc_faltantes', $nrc);
         }
 
@@ -254,6 +283,65 @@ class ActasController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'No se pudo limpiar el acta.');
         }
+    }
+
+    public function procesarMatriculas(Request $request, $nrc)
+    {
+        $decisiones = $request->input('decisiones', []);
+
+        $asignados = 0;
+        $ignorados = 0;
+
+        foreach ($decisiones as $email => $data) {
+            $email  = strtolower(trim($email));
+            $accion = $data['accion'] ?? 'ignorar';
+            $codigo = $data['codigo'] ?? null;
+
+            if ($accion === 'asignar' && $codigo && preg_match('/^\d{9}$/', $codigo)) {
+                // Crear estudiante si no existe
+                $existente = \App\Models\Estudiante::where('codigo_estudiante', $codigo)->first();
+                if (!$existente) {
+                    $nombreAlumno = CalificacionFinal::where('email_alumno', $email)
+                        ->value('nombre_alumno');
+
+                    \App\Models\Estudiante::create([
+                        'nombre'            => $nombreAlumno ?? $email,
+                        'email'             => $email,
+                        'codigo_estudiante' => $codigo,
+                        'clave_unica'       => \App\Models\Estudiante::generarClaveUnica(),
+                    ]);
+                }
+
+                CalificacionFinal::where('materia_nrc', (string) $nrc)
+                    ->where('email_alumno', $email)
+                    ->update([
+                        'codigo_estudiante' => $codigo,
+                        'sin_matricula'     => false,
+                    ]);
+
+                $asignados++;
+            } else {
+                // Ignorar — queda en el acta sin matrícula
+                CalificacionFinal::where('materia_nrc', (string) $nrc)
+                    ->where('email_alumno', $email)
+                    ->update(['sin_matricula' => false]);
+
+                $ignorados++;
+            }
+        }
+
+        $msg = '';
+        if ($asignados > 0 && $ignorados > 0) {
+            $msg = "Se asignó matrícula a {$asignados} alumno(s) y se ignoraron {$ignorados} alumno(s).";
+        } elseif ($asignados > 0) {
+            $msg = "Se asignó matrícula a {$asignados} alumno(s) correctamente.";
+        } else {
+            $msg = "Se ignoraron {$ignorados} alumno(s). Quedan en el acta sin matrícula vinculada.";
+        }
+
+        return redirect()
+            ->route('profesor.actas.index', $nrc)
+            ->with('success', $msg);
     }
 
     private function notificarCalificacionesPublicadas($nrc, $actividadNombre = null)

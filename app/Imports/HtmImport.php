@@ -60,7 +60,7 @@ class HtmImport
             $numero = trim($celdas->item(0)->textContent);
             if (!is_numeric($numero) || (int)$numero === 0) continue;
 
-            $nombre = preg_replace('/\s+/', ' ', trim($celdas->item(1)->textContent));
+            $nombre = strtoupper(preg_replace('/\s+/', ' ', trim($celdas->item(1)->textContent)));
             $codigo = trim($celdas->item(2)->textContent);
             $email  = isset($emails[$emailIndex]) ? strtolower(trim($emails[$emailIndex])) : null;
             $emailIndex++;
@@ -139,7 +139,7 @@ class HtmImport
 
         $claveUnica      = Estudiante::generarClaveUnica();
         $nuevoEstudiante = Estudiante::create([
-            'nombre'            => $nombre,
+            'nombre'            => strtoupper($nombre),
             'email'             => $email,
             'codigo_estudiante' => $codigo,
             'clave_unica' => $claveUnica,
@@ -150,7 +150,7 @@ class HtmImport
         if ($email) {
             $user = User::firstOrCreate(
                 ['email' => $email],
-                ['name' => $nombre, 'password' => Hash::make(Str::random(16)), 'role' => 'alumno']
+                ['name' => strtoupper($nombre), 'password' => Hash::make(Str::random(16)), 'role' => 'alumno']
             );
             $this->vincularAlumnoMateria($user);
         }

@@ -73,11 +73,14 @@ class MateriaController extends Controller
 
         $ponderacionTotal = $actividades->sum('ponderacion');
 
+        $totalSesiones = \App\Models\Asistencia::where('materia_nrc', $nrc)->count();
+
         return view('profesor.grupos-detalle', compact(
             'materia',
             'estudiantes',
             'actividades',
-            'ponderacionTotal'
+            'ponderacionTotal',
+            'totalSesiones'
         ));
     }
 

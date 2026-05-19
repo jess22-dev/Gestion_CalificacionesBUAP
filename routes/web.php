@@ -215,12 +215,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/eliminar-todo', [ActasController::class, 'eliminar'])->name('profesor.actas.eliminar');
         });
 
+        // Matrícula en actas
+        Route::post('/actas/{nrc}/procesar-matriculas', [\App\Http\Controllers\ActasController::class, 'procesarMatriculas'])->name('profesor.actas.procesar_matriculas');
+
         // Guardado manual de actas
         Route::post('/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])->name('profesor.actas.guardar_manual');
 
         // Historial de asistencias
         Route::get('/grupo/{nrc}/historial', [MateriaController::class, 'historial'])->name('profesor.historial');
         Route::post('/grupo/{nrc}/historial/editar', [AsistenciaController::class, 'editarHistorial'])->name('profesor.historial.editar');
+
+        // Estadísticas
+        Route::get('/estadisticas/{nrc}',        [\App\Http\Controllers\EstadisticasController::class, 'grupo'])->name('profesor.estadisticas');
+        Route::get('/estadisticas/{nrc}/alumno', [\App\Http\Controllers\EstadisticasController::class, 'alumno'])->name('profesor.estadisticas.alumno');
 
         // Calificaciones por actividad
         Route::get('/grupo/{nrc}/actividades/{actividad}/detalle', [ActividadController::class, 'detalle'])->name('profesor.actividades.detalle');

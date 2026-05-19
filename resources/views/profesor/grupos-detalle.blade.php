@@ -48,116 +48,55 @@
 
                 <div class="p-8">
 
-                    {{-- ACTIVIDADES --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {{-- RESUMEN DEL GRUPO --}}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-                        {{-- Formulario --}}
-                        <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
-                            <h3 class="font-bold text-lg mb-4 text-[#002d62]">Definir Actividad</h3>
-                            <form action="{{ route('profesor.actividades.store', $materia->nrc) }}" method="POST" class="space-y-3">
-                                @csrf
-                                <input type="text" name="nombre" value="{{ old('nombre') }}"
-                                    placeholder="Nombre actividad"
-                                    class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a]">
-
-                                <select name="categoria" id="categoria_select"
-                                    onchange="actualizarPonderacion(this)"
-                                    class="w-full rounded-xl border-gray-300">
-                                    <option value="">-- Selecciona categoría --</option>
-                                    <option value="Prácticas" data-pond="20" {{ old('categoria') == 'Prácticas' ? 'selected' : '' }}>Prácticas (20% predeterminado)</option>
-                                    <option value="Tareas" data-pond="20" {{ old('categoria') == 'Tareas' ? 'selected' : '' }}>Tareas (20% predeterminado)</option>
-                                    <option value="Examen" data-pond="20" {{ old('categoria') == 'Examen' ? 'selected' : '' }}>Examen (20% predeterminado)</option>
-                                    <option value="Proyecto Final" data-pond="40" {{ old('categoria') == 'Proyecto Final' ? 'selected' : '' }}>Proyecto Final (40% predeterminado)</option>
-                                </select>
-
-                                <div class="relative">
-                                    <input type="number" name="ponderacion" id="ponderacion_input"
-                                        value="{{ old('ponderacion') }}"
-                                        placeholder="Ponderación % (opcional — usa el predeterminado)"
-                                        min="1" max="100"
-                                        class="w-full rounded-xl border-gray-300 focus:ring-[#1e4b8a]">
-                                    <p class="text-xs text-gray-400 mt-1 italic" id="pond_hint">
-                                        Si lo dejas vacío, se usará el % predeterminado de la categoría.
-                                    </p>
-                                </div>
-
-                                <div class="bg-blue-50 rounded-xl p-3 text-sm">
-                                    <span class="text-blue-600 font-bold">Usado: {{ $ponderacionTotal }}%</span>
-                                    <span class="text-gray-500"> / Disponible: {{ 100 - $ponderacionTotal }}%</span>
-                                </div>
-                                <button type="submit"
-                                    class="w-full bg-[#002d62] text-white py-2 rounded-xl font-bold hover:bg-[#1e4b8a] transition {{ $ponderacionTotal >= 100 ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                    {{ $ponderacionTotal >= 100 ? 'disabled' : '' }}>
-                                    Crear Actividad
-                                </button>
-                            </form>
-
-                            <script>
-                                function actualizarPonderacion(select) {
-                                    const opt   = select.options[select.selectedIndex];
-                                    const pond  = opt.dataset.pond;
-                                    const input = document.getElementById('ponderacion_input');
-                                    const hint  = document.getElementById('pond_hint');
-                                    if (pond && !input.value) {
-                                        hint.textContent = `Si lo dejas vacío se usará ${pond}% (predeterminado de ${opt.value}).`;
-                                    }
-                                }
-                            </script>
-                        </div>
-
-                        {{-- Lista actividades --}}
-                        <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-lg text-[#002d62]">Actividades</h3>
-                                <span class="text-xs font-black bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                                    {{ $actividades->count() }} creada(s)
-                                </span>
+                        {{-- Total alumnos --}}
+                        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex flex-col items-center text-center">
+                            <div class="bg-[#002d62] p-2 rounded-xl mb-3">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
                             </div>
-                            @if($actividades->isEmpty())
-                                <p class="text-gray-400 text-sm italic text-center py-6">No hay actividades aún.</p>
-                            @else
-                                <ul class="space-y-3">
-                                    @foreach($actividades as $actividad)
-                                        @php
-                                            $badgeColor = match($actividad->categoria) {
-                                                'Prácticas'      => 'bg-blue-100 text-blue-600',
-                                                'Tareas'         => 'bg-indigo-100 text-indigo-600',
-                                                'Examen'         => 'bg-purple-100 text-purple-600',
-                                                'Proyecto Final' => 'bg-green-200 text-green-700',
-                                                default          => 'bg-gray-100 text-gray-600',
-                                            };
-                                        @endphp
-                                        <li class="bg-gray-50 p-3 rounded-xl flex justify-between items-center border border-gray-100">
-                                            <div>
-                                                <p class="font-bold text-gray-700 text-sm">{{ $actividad->nombre }}</p>
-                                                <div class="flex gap-2 mt-1">
-                                                    <span class="{{ $badgeColor }} text-[10px] font-black px-2 py-0.5 rounded uppercase">{{ $actividad->categoria }}</span>
-                                                    <span class="text-xs text-gray-500 font-bold">{{ $actividad->ponderacion }}%</span>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <a href="{{ route('profesor.actividades.detalle', [$materia->nrc, $actividad->id]) }}"
-                                                   class="text-[#002d62] hover:text-[#1e4b8a] text-xs font-bold border border-[#002d62] px-2 py-1 rounded-lg hover:bg-blue-50 transition">
-                                                    Calificar
-                                                </a>
-                                                <form action="{{ route('profesor.actividades.destroy', [$materia->nrc, $actividad->id]) }}"
-                                                      method="POST" onsubmit="return confirm('¿Eliminar esta actividad?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-400 hover:text-red-600 text-xs font-bold">Eliminar</button>
-                                                </form>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                                <div class="mt-4 flex justify-between items-center p-3 bg-gray-800 rounded-xl">
-                                    <span class="text-sm font-black text-white">Total</span>
-                                    <span class="font-black {{ $ponderacionTotal == 100 ? 'text-green-400' : 'text-yellow-400' }}">
-                                        {{ $ponderacionTotal }}%
-                                    </span>
-                                </div>
-                            @endif
+                            <p class="text-3xl font-black text-[#002d62]">{{ $estudiantes->count() }}</p>
+                            <p class="text-xs text-gray-500 font-semibold mt-1 uppercase tracking-wide">Alumnos activos</p>
                         </div>
+
+                        {{-- Actividades creadas --}}
+                        <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-5 flex flex-col items-center text-center">
+                            <div class="bg-yellow-500 p-2 rounded-xl mb-3">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="text-3xl font-black text-yellow-600">{{ $actividades->count() }}</p>
+                            <p class="text-xs text-gray-500 font-semibold mt-1 uppercase tracking-wide">Actividades</p>
+                        </div>
+
+                        {{-- Ponderación usada --}}
+                        <div class="bg-green-50 border border-green-100 rounded-2xl p-5 flex flex-col items-center text-center">
+                            <div class="bg-green-600 p-2 rounded-xl mb-3">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-3xl font-black {{ $ponderacionTotal == 100 ? 'text-green-600' : 'text-yellow-600' }}">
+                                {{ $ponderacionTotal }}%
+                            </p>
+                            <p class="text-xs text-gray-500 font-semibold mt-1 uppercase tracking-wide">Ponderación usada</p>
+                        </div>
+
+                        {{-- Sesiones de asistencia --}}
+                        <div class="bg-purple-50 border border-purple-100 rounded-2xl p-5 flex flex-col items-center text-center">
+                            <div class="bg-purple-600 p-2 rounded-xl mb-3">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-3xl font-black text-purple-600">{{ $totalSesiones }}</p>
+                            <p class="text-xs text-gray-500 font-semibold mt-1 uppercase tracking-wide">Sesiones registradas</p>
+                        </div>
+
                     </div>
 
                 </div>
@@ -189,25 +128,47 @@
                 </div>
             </div>
 
-            {{-- NUEVO: ACCESO AL PUENTE INTELIGENTE DE ACTAS --}}
-            <div class="mt-6">
-                <div class="bg-gradient-to-r from-[#1e4b8a] to-[#002d62] p-8 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div class="flex items-center gap-5">
-                        <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                            <svg class="w-10 h-10 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            {{-- ACCESO AL GENERADOR DE ACTAS Y ESTADÍSTICAS --}}
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {{-- Generador de Actas --}}
+                <div class="bg-gradient-to-r from-[#1e4b8a] to-[#002d62] p-6 rounded-3xl shadow-2xl text-white flex flex-col justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white/10 p-3 rounded-2xl">
+                            <svg class="w-8 h-8 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-black italic">Generador de Actas</h2>
+                            <h2 class="text-xl font-black">Generador de Actas</h2>
                             <p class="text-blue-100 text-sm">Valida datos y genera el acta final.</p>
                         </div>
                     </div>
-                    <a href="{{ route('profesor.actas.index',$materia->nrc) }}" 
-                       class="w-full md:w-auto bg-white text-[#002d62] px-8 py-4 rounded-2xl font-black text-center hover:bg-blue-50 transition-all transform hover:scale-105 shadow-xl">
+                    <a href="{{ route('profesor.actas.index', $materia->nrc) }}"
+                       class="w-full bg-white text-[#002d62] px-6 py-3 rounded-2xl font-black text-center hover:bg-blue-50 transition-all transform hover:scale-105 shadow-xl text-sm">
                         INGRESAR
                     </a>
                 </div>
+
+                {{-- Estadísticas --}}
+                <div class="bg-gradient-to-r from-[#0f766e] to-[#134e4a] p-6 rounded-3xl shadow-2xl text-white flex flex-col justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white/10 p-3 rounded-2xl">
+                            <svg class="w-8 h-8 text-teal-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black">Estadísticas</h2>
+                            <p class="text-teal-100 text-sm">Rendimiento grupal e individual.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('profesor.estadisticas', $materia->nrc) }}"
+                       class="w-full bg-white text-[#0f766e] px-6 py-3 rounded-2xl font-black text-center hover:bg-teal-50 transition-all transform hover:scale-105 shadow-xl text-sm">
+                        VER ESTADÍSTICAS
+                    </a>
+                </div>
+
             </div>
 
         </div>

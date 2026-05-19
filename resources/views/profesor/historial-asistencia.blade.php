@@ -24,7 +24,6 @@
                     <span class="flex items-center gap-1">
                         <span class="w-5 h-5 rounded-full bg-blue-400 border-2 border-blue-600 inline-block"></span> Justificado
                     </span>
-                    <span class="text-gray-400 italic">← Click para cambiar</span>
                 </div>
             </div>
 
@@ -33,12 +32,11 @@
 
             @if(empty($diasUnicos) || count($diasUnicos) === 0)
                 <div class="bg-white rounded-2xl shadow-xl p-12 text-center border border-gray-100">
-                    <p class="text-5xl mb-4">📋</p>
                     <h3 class="text-xl font-bold text-gray-600 mb-2">Sin sesiones registradas</h3>
                     <p class="text-gray-400 text-sm">Aún no se ha tomado ninguna asistencia en esta materia.</p>
                     <a href="{{ route('profesor.asistencia', $materia->nrc) }}"
                        class="inline-block mt-6 bg-[#002d62] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#1e4b8a] transition">
-                        Tomar primera asistencia →
+                        Tomar primera asistencia 
                     </a>
                 </div>
             @else
@@ -210,12 +208,12 @@
                 aplicarColor(btn, siguiente);
                 btn.dataset.estatus = siguiente;
                 btn.title = ESTATUS_CONFIG[siguiente]?.title ?? siguiente;
-                mostrarNotif(`✅ Cambiado a: ${ESTATUS_CONFIG[siguiente]?.title ?? siguiente}`);
+                mostrarNotif(` Cambiado a: ${ESTATUS_CONFIG[siguiente]?.title ?? siguiente}`);
             } else {
-                mostrarNotif('❌ ' + (data.error ?? 'Error'), true);
+                mostrarNotif(' ' + (data.error ?? 'Error'), true);
             }
         })
-        .catch(() => mostrarNotif('❌ Error al guardar', true));
+        .catch(() => mostrarNotif(' Error al guardar', true));
     }
 
     function aplicarColor(btn, estatus) {

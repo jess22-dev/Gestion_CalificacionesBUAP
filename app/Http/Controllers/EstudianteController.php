@@ -120,7 +120,7 @@ class EstudianteController extends Controller
         $claveUnica = Estudiante::generarClaveUnica();
 
         $estudiante = Estudiante::create([
-            'nombre'            => $request->nombre,
+            'nombre'            => strtoupper($request->nombre),
             'email'             => $request->email,
             'codigo_estudiante' => $request->codigo_estudiante,
             'clave_unica'       => $claveUnica,
@@ -130,7 +130,7 @@ class EstudianteController extends Controller
         $userAlumno = User::firstOrCreate(
             ['email' => $request->email],
             [
-                'name'     => $request->nombre,
+                'name'     => strtoupper($request->nombre),
                 'password' => Hash::make(Str::random(16)), // password random, no se usa
                 'role'     => 'alumno',
             ]

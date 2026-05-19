@@ -199,25 +199,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return back()->with('success', 'Lista de asistencia guardada correctamente.');
         })->name('asistencias.guardar');
 
-        // --- MÓDULO DE ACTAS (CORREGIDO) ---
+        // --- MÓDULO DE ACTAS (SINTONÍA TOTAL) ---
         Route::prefix('actas/{nrc}')->group(function () {
-            // 1. Vista principal
-            Route::get('/importar', [ActasController::class, 'index'])->name('profesor.actas.index');
+            // 1. La Vista (GET) - URL: /profesor/actas/{nrc}
+            Route::get('/', [ActasController::class, 'index'])->name('profesor.actas.index');
             
-            // 2. Procesar archivos
-            Route::post('/procesar', [ActasController::class, 'procesar'])->name('profesor.actas.procesar');
+            // 2. La Acción de subir (POST) - URL: /profesor/actas/{nrc}/subir
+            // Cambié el nombre a 'subir' para que no choque con nada
+            Route::post('/subir', [ActasController::class, 'procesar'])->name('profesor.actas.importar');
             
             // 3. Exportar Excel
             Route::post('/exportar', [ActasController::class, 'exportar'])->name('profesor.actas.exportar');
 
-            // 4. Eliminar actividad (URL CORTA porque ya hereda el prefijo)
+            // 4. Eliminar actividad
             Route::delete('/eliminar-actividad/{actividad}', [ActasController::class, 'eliminarActividad'])
                 ->name('profesor.actas.eliminarActividad');
 
-            // 5. Eliminar TODO el acta (Opcional, por si quieres el botón de limpieza total)
+            // 5. Eliminar TODO
             Route::delete('/eliminar-todo', [ActasController::class, 'eliminar'])
                 ->name('profesor.actas.eliminar');
         });
+
          Route::post('/profesor/actas/{nrc}/guardar-manual', [ActasController::class, 'guardarManual'])
             ->name('profesor.actas.guardar_manual');
 

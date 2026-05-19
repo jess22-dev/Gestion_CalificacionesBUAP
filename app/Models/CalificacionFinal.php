@@ -15,6 +15,7 @@ class CalificacionFinal extends Model
         'actividad_nombre',
         'puntaje',
         'fecha_actividad',
+        'tipo_actividad',
         'participacion',  // Nuevo
         'proyecto',       // Nuevo
         'examen_u1',      // Nuevo

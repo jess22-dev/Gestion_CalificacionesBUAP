@@ -14,16 +14,21 @@ class ActasController extends Controller
     {
         $materia = Materia::where('nrc', $nrc)->firstOrFail();
         
-        // 1. Traemos TODAS las notas
         $notasTodas = CalificacionFinal::where('materia_nrc', (string)$nrc)->get();
 
-        // 2. Filtramos actividades de Teams (Dinámicas)
-        $actividades = $notasTodas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
-                                  ->pluck('actividad_nombre')
-                                  ->unique()
-                                  ->values();
+        // --- ESTA ES LA PARTE CLAVE ---
+        // Creamos un mapa de 'Nombre Actividad' => 'tipo' (tarea/practica)
+        // Esto servirá para los encabezados y para las clases CSS
+        $tipos = $notasTodas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
+                            ->pluck('tipo_actividad', 'actividad_nombre')
+                            ->toArray();
+        // ------------------------------
 
-        // 3. Organizamos los datos por alumno
+        $actividades = $notasTodas->where('actividad_nombre', '!=', 'DATOS_MANUALES')
+                                    ->pluck('actividad_nombre')
+                                    ->unique()
+                                    ->values();
+
         $alumnosData = [];
         $notasAgrupadas = $notasTodas->groupBy('email_alumno');
 
@@ -34,7 +39,6 @@ class ActasController extends Controller
                 'manual' => $items->firstWhere('actividad_nombre', 'DATOS_MANUALES')
             ];
 
-            // Llenamos solo las que son de Teams
             foreach ($items->where('actividad_nombre', '!=', 'DATOS_MANUALES') as $n) {
                 $alumnosData[$correo]['notas'][$n->actividad_nombre] = $n->puntaje;
             }
@@ -43,69 +47,76 @@ class ActasController extends Controller
         return view('profesor.actas.index', [
             'materia'     => $materia,
             'actividades' => $actividades,
-            'alumnos'     => $alumnosData, 
+            'alumnos'     => $alumnosData,
+            'tipos'       => $tipos, // <--- ENVIAMOS LA VARIABLE AQUÍ
         ]);
     }
-
     public function procesar(Request $request, $nrc)
     {
-        $request->validate([
-            'archivos_teams.*' => 'required|mimes:xlsx,xls,csv',
-        ]);
+        $tipo = $request->input('tipo');
+        $archivo = $request->file('archivo');
+        $data = Excel::toArray([], $archivo);
+        $filas = collect($data[0]);
 
-        if ($request->hasFile('archivos_teams')) {
-            foreach ($request->file('archivos_teams') as $archivo) {
-                $data = Excel::toArray([], $archivo);
-                $filas = collect($data[0]);
+        // 1. Buscamos en qué fila están los encabezados (normalmente es la fila 2 en Teams)
+        $indiceEncabezados = null;
+        $encabezados = $filas->first(function ($fila, $key) {
+            return is_array($fila) && in_array('Dirección de correo', $fila);
+        });
 
-                // Buscamos la fila que contiene los encabezados reales
-                $encabezados = $filas->first(function ($item) {
-                    return is_array($item) && in_array('Dirección de correo', $item);
-                });
+        if (!$encabezados) {
+            return redirect()->back()->with('error', 'No se encontró la estructura de Teams (Falta columna Dirección de correo).');
+        }
 
-                if (!$encabezados) continue; 
+        // Obtenemos el índice de la fila donde están los encabezados
+        $indiceEncabezados = $filas->search($encabezados);
 
-                $colCorreo     = array_search('Dirección de correo', $encabezados);
-                $colTarea      = array_search('Tareas', $encabezados);
-                $colNombre     = array_search('Nombre completo', $encabezados);
-                $colPorcentaje = array_search('Porcentaje', $encabezados);
+        // 2. Mapeamos las posiciones exactas según tu imagen
+        $colNombre     = array_search('Nombre completo', $encabezados);
+        $colCorreo     = array_search('Dirección de correo', $encabezados);
+        $colTarea      = array_search('Tareas', $encabezados);
+        // En tu imagen "Porcentaje" es la última columna, buscamos por nombre exacto
+        $colPorcentaje = array_search('Porcentaje', $encabezados);
 
-                // Limpiamos la data para quitar encabezados y filas vacías
-                $datosLimpios = $filas->filter(function ($fila) use ($colCorreo) {
-                    return isset($fila[$colCorreo]) && str_contains($fila[$colCorreo], '@'); 
-                });
+        // 3. Empezamos a leer justo después de los encabezados
+        $datosAlumnos = $filas->slice($indiceEncabezados + 1);
 
-                foreach ($datosLimpios as $fila) {
-                    $correo       = trim($fila[$colCorreo]);
-                    $actividad    = trim($fila[$colTarea]);
-                    $nombreAlumno = trim($fila[$colNombre]);
-                    
-                    // Lógica de calificación: Teams da decimal (0.8 = 80%)
-                    $valorCelda   = $fila[$colPorcentaje] ?? 0;
-                    $puntajeTeams = is_numeric($valorCelda) ? floatval($valorCelda) : 0;
-                    
-                    // IMPORTANTE: Aquí guardamos con un decimal para que el promedio 
-                    // de la tabla web sea exacto antes del redondeo final del acta.
-                    $notaFinal = round($puntajeTeams * 10, 1);
+        foreach ($datosAlumnos as $fila) {
+            // Validamos que la fila tenga un correo válido de la BUAP
+            if (!isset($fila[$colCorreo]) || !str_contains($fila[$colCorreo], '@')) continue;
 
-                    CalificacionFinal::updateOrCreate(
-                        [
-                            'materia_nrc'      => (string)$nrc,
-                            'email_alumno'     => $correo,
-                            'actividad_nombre' => $actividad,
-                        ],
-                        [
-                            'nombre_alumno'    => $nombreAlumno,
-                            'puntaje'          => $notaFinal,
-                            'fecha_actividad'  => now()->format('d/m/Y'), 
-                        ]
-                    );
-                }
-            }
+            $correo       = trim($fila[$colCorreo]);
+            $nombreAlumno = trim($fila[$colNombre]);
+            $actividad    = trim($fila[$colTarea]);
+            
+            // El porcentaje en Teams viene como "90%", "100%" o "0.9". 
+            // Vamos a limpiar el símbolo % si existe y convertir a número.
+            $valorRaw = $fila[$colPorcentaje] ?? 0;
+            $puntajeLimpio = str_replace('%', '', $valorRaw);
+            $puntajeTeams = is_numeric($puntajeLimpio) ? floatval($puntajeLimpio) : 0;
+
+            // Si el valor es mayor a 1 (ej: 90), lo dividimos entre 10 para escala 0-10
+            // Si es menor o igual a 1 (ej: 0.9), lo multiplicamos por 10.
+            $notaFinal = ($puntajeTeams > 1) ? ($puntajeTeams / 10) : ($puntajeTeams * 10);
+            $notaFinal = round($notaFinal, 1);
+
+            \App\Models\CalificacionFinal::updateOrCreate(
+                [
+                    'materia_nrc'      => (string)$nrc,
+                    'email_alumno'     => $correo,
+                    'actividad_nombre' => $actividad,
+                ],
+                [
+                    'nombre_alumno'    => $nombreAlumno,
+                    'puntaje'          => $notaFinal,
+                    'tipo_actividad'   => $tipo, // 'tarea' o 'practica'
+                    'fecha_actividad'  => now()->format('d/m/Y'), 
+                ]
+            );
         }
 
         return redirect()->route('profesor.actas.index', $nrc)
-                         ->with('success', 'Calificaciones actualizadas.');
+                        ->with('success', "Se cargaron las " . ($tipo == 'tarea' ? 'Tareas' : 'Prácticas') . " correctamente.");
     }
 
     public function guardarManual(Request $request, $nrc)

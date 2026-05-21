@@ -108,7 +108,15 @@ class ActasController extends Controller
             $notaFinal     = round($notaFinal, 1);
 
             $codigoEstudiante = $indiceMatriculas[$correo] ?? null;
-            $sinMatricula     = is_null($codigoEstudiante);
+
+            // Si no encontramos en HTM, buscar en BD por si ya fue asignado antes
+            if (!$codigoEstudiante) {
+                $codigoEstudiante = CalificacionFinal::where('email_alumno', $correo)
+                    ->whereNotNull('codigo_estudiante')
+                    ->value('codigo_estudiante');
+            }
+
+            $sinMatricula = is_null($codigoEstudiante);
 
             CalificacionFinal::updateOrCreate(
                 [
@@ -122,7 +130,7 @@ class ActasController extends Controller
                     'tipo_actividad'    => $tipo,
                     'codigo_estudiante' => $codigoEstudiante,
                     'sin_matricula'     => $sinMatricula,
-                    'fecha_actividad'   => now()->format('d/m/Y'),
+                    'fecha_actividad'   => now()->format('d/m/Y H:i'),
                 ]
             );
         }
@@ -142,25 +150,82 @@ class ActasController extends Controller
 
         $this->notificarCalificacionesPublicadas($nrc, $actividad ?? null);
 
-        $tipoLabel = $tipo === 'tarea' ? 'Tareas' : 'Prácticas';
+        $tipoLabel = match($tipo) {
+            'tarea'         => 'Tareas',
+            'practica'      => 'Prácticas',
+            'participacion' => 'Participaciones',
+            'examen'        => 'Exámenes',
+            'recuperacion'  => 'Recuperaciones',
+            'proyecto'      => 'Proyectos',
+            default         => ucfirst($tipo),
+        };
+
+        // ── Opción C+D: detectar alumnos HTM sin calificación en esta actividad ──
+        $actividadCargada = null;
+        foreach ($emailsEnExcel as $emailEx) {
+            $reg = \App\Models\CalificacionFinal::where('materia_nrc', (string)$nrc)
+                ->where('email_alumno', $emailEx)
+                ->where('actividad_nombre', '!=', 'DATOS_MANUALES')
+                ->orderByDesc('updated_at')->first();
+            if ($reg) { $actividadCargada = $reg->actividad_nombre; break; }
+        }
+
+        $htmSinCalificacion = [];
+        if ($actividadCargada) {
+            $emailsConNota = \App\Models\CalificacionFinal::where('materia_nrc', (string)$nrc)
+                ->where('actividad_nombre', $actividadCargada)
+                ->pluck('email_alumno')->map(fn($e) => strtolower(trim($e)))->toArray();
+
+            foreach ($alumnosHtm as $alumnoHtm) {
+                if (!in_array($alumnoHtm['email'], $emailsConNota)) {
+                    $htmSinCalificacion[] = $alumnoHtm;
+                }
+            }
+        }
+
+        // ── Aplicar recuperación B+D ──
+        $examenRecupera = $request->input('examen_recupera');
+        if ($tipo === 'recuperacion' && $examenRecupera) {
+            foreach ($emailsEnExcel as $emailRec) {
+                $notaRecup = \App\Models\CalificacionFinal::where('materia_nrc', (string)$nrc)
+                    ->where('email_alumno', $emailRec)
+                    ->where('actividad_nombre', $actividadCargada)
+                    ->value('puntaje');
+
+                $notaExamen = \App\Models\CalificacionFinal::where('materia_nrc', (string)$nrc)
+                    ->where('email_alumno', $emailRec)
+                    ->where('actividad_nombre', $examenRecupera)
+                    ->value('puntaje');
+
+                // Opción D: solo sustituir si reprobó el examen original
+                if ($notaExamen !== null && $notaExamen < 6 && $notaRecup !== null) {
+                    \App\Models\CalificacionFinal::where('materia_nrc', (string)$nrc)
+                        ->where('email_alumno', $emailRec)
+                        ->where('actividad_nombre', $examenRecupera)
+                        ->update(['puntaje' => $notaRecup]);
+                }
+            }
+        }
+
+        $redirect = redirect()->route('profesor.actas.index', $nrc)
+            ->with('success', "Se cargaron las {$tipoLabel} correctamente.");
 
         if (!empty($faltantesEnExcel)) {
-            return redirect()->route('profesor.actas.index', $nrc)
-                ->with('success', "Se cargaron las {$tipoLabel} correctamente.")
-                ->with('advertencia_faltantes', $faltantesEnExcel)
-                ->with('nrc_faltantes', $nrc)
-                ->with('sin_matricula_list', $sinMatriculaList);
+            $redirect = $redirect->with('advertencia_faltantes', $faltantesEnExcel);
         }
 
         if (!empty($sinMatriculaList)) {
-            return redirect()->route('profesor.actas.index', $nrc)
-                ->with('success', "Se cargaron las {$tipoLabel} correctamente.")
-                ->with('sin_matricula_list', $sinMatriculaList)
-                ->with('nrc_faltantes', $nrc);
+            $redirect = $redirect->with('sin_matricula_list', $sinMatriculaList);
         }
 
-        return redirect()->route('profesor.actas.index', $nrc)
-            ->with('success', "Se cargaron las {$tipoLabel} correctamente.");
+        if (!empty($htmSinCalificacion)) {
+            $redirect = $redirect
+                ->with('htm_sin_calificacion', $htmSinCalificacion)
+                ->with('actividad_cargada', $actividadCargada)
+                ->with('tipo_cargado', $tipo);
+        }
+
+        return $redirect;
     }
 
     public function guardarManual(Request $request, $nrc)
@@ -218,7 +283,31 @@ class ActasController extends Controller
             $datosAlumnosFlat[] = $fila;
         }
 
-        return Excel::download(new ActaExport($datosAlumnosFlat, $listaActividades, $materia), "Acta_Final_{$nrc}.xlsx");
+        // Construir mapa de tipos normalizando claves y valores nulos
+        $tiposActividades = [];
+        foreach ($todasLasNotas->where('actividad_nombre', '!=', 'DATOS_MANUALES') as $nota) {
+            $clave = strtolower(trim($nota->actividad_nombre));
+            $tiposActividades[$clave] = $nota->tipo_actividad ?? 'tarea';
+        }
+        // También mantener las claves originales para compatibilidad
+        foreach ($todasLasNotas->where('actividad_nombre', '!=', 'DATOS_MANUALES') as $nota) {
+            $tiposActividades[trim($nota->actividad_nombre)] = $nota->tipo_actividad ?? 'tarea';
+        }
+
+        // Ponderaciones desde la request (o valores por defecto)
+        $ponderaciones = [
+            'participacion' => (float)($request->input('w_part',  10)),
+            'tarea'         => (float)($request->input('w_tareas', 10)),
+            'practica'      => (float)($request->input('w_prac',  20)),
+            'proyecto'      => (float)($request->input('w_proy',  40)),
+            'examen'        => (float)($request->input('w_exam',  20)),
+            'recuperacion'  => (float)($request->input('w_exam',  20)),
+        ];
+
+        return Excel::download(
+            new ActaExport($datosAlumnosFlat, $listaActividades, $materia, $tiposActividades, $ponderaciones),
+            "Acta_Final_{$nrc}.xlsx"
+        );
     }
 
     public function exportarOficial(Request $request, $nrc)
@@ -360,6 +449,62 @@ class ActasController extends Controller
                       ->setPaper('letter', 'portrait');
 
         return $pdf->download("Lista_Acceso_{$nrc}.pdf");
+    }
+
+    public function guardarNota(Request $request, $nrc)
+    {
+        try {
+            $email     = strtolower(trim($request->input('email')));
+            $actividad = $request->input('actividad');
+            $valor     = $request->input('valor');
+            $nombre    = $request->input('nombre');
+
+            $registro = CalificacionFinal::firstOrNew([
+                'materia_nrc'      => (string) $nrc,
+                'email_alumno'     => $email,
+                'actividad_nombre' => $actividad,
+            ]);
+
+            $registro->puntaje       = is_numeric($valor) ? round((float)$valor, 2) : 0;
+            $registro->nombre_alumno = $nombre ?? $email;
+            if (!$registro->fecha_actividad) {
+                $registro->fecha_actividad = now()->format('d/m/Y H:i');
+            }
+            $registro->save();
+
+            return response()->json(['status' => 'success']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function asignarCero(Request $request, $nrc)
+    {
+        $actividad = $request->input('actividad');
+        $tipo      = $request->input('tipo', 'tarea');
+        $alumnos   = $request->input('alumnos', []);
+        $nombres   = $request->input('nombres', []);
+
+        foreach ($alumnos as $email) {
+            $email = strtolower(trim($email));
+            $registro = CalificacionFinal::firstOrNew([
+                'materia_nrc'      => (string) $nrc,
+                'email_alumno'     => $email,
+                'actividad_nombre' => $actividad,
+            ]);
+            $registro->nombre_alumno   = $nombres[$email] ?? $email;
+            $registro->puntaje         = 0;
+            $registro->tipo_actividad  = $tipo;
+            $registro->fecha_actividad = now()->format('d/m/Y H:i');
+            if (!$registro->codigo_estudiante) {
+                $registro->codigo_estudiante = \App\Models\Estudiante::where('email', $email)->value('codigo_estudiante');
+            }
+            $registro->sin_matricula = is_null($registro->codigo_estudiante);
+            $registro->save();
+        }
+
+        return redirect()->route('profesor.actas.index', $nrc)
+            ->with('success', "Se asignó 0 a " . count($alumnos) . " alumno(s) en '{$actividad}'. Puedes modificar las calificaciones en la tabla.");
     }
 
     private function notificarCalificacionesPublicadas($nrc, $actividadNombre = null)

@@ -23,7 +23,7 @@
     </style>
 
     <div class="py-8 bg-gray-50 min-h-screen" x-data="actaApp()" x-init="recalcularTodo()">
-        <div class="max-w-full mx-auto sm:px-6 lg:px-8 transition-all duration-300" :class="alumnoEnfocado ? 'blur-content' : ''">
+        <div class="max-w-full mx-auto sm:px-6 lg:px-8 transition-all duration-300" >
 
             {{-- Botón volver --}}
             <div class="mb-6 flex justify-between items-center">
@@ -35,177 +35,157 @@
 
             {{-- ADVERTENCIA: Alumnos en HTM no encontrados en Excel --}}
             @if(session('advertencia_faltantes'))
-                <div class="mb-6 bg-amber-50 border-2 border-amber-400 rounded-2xl p-6" id="bloque-faltantes">
-                    <div class="flex items-start gap-4 mb-4">
-                        <div class="bg-amber-400 p-2 rounded-xl flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="font-black text-amber-800 text-base uppercase tracking-wide">
-                                 {{ count(session('advertencia_faltantes')) }} alumno(s) del HTM no aparecen en el Excel
-                            </h3>
-                            <p class="text-amber-700 text-sm mt-1">
-                                Elige una acción para cada alumno y luego presiona <strong>"Proceder con los cambios"</strong>.
-                            </p>
-                        </div>
+                <div class="mb-6 bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 flex items-start gap-3">
+                    <div class="bg-amber-400 p-2 rounded-xl flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
                     </div>
-                    <form action="{{ route('profesor.estudiantes.baja.faltantes') }}" method="POST" id="form-faltantes">
-                        @csrf
-                        <input type="hidden" name="nrc" value="{{ session('nrc_faltantes') }}">
-                        <div class="overflow-x-auto rounded-xl border border-amber-200">
-                            <table class="w-full text-sm">
-                                <thead class="bg-amber-100">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left font-black text-amber-800 uppercase text-xs">Nombre</th>
-                                        <th class="px-4 py-2 text-left font-black text-amber-800 uppercase text-xs">Matrícula</th>
-                                        <th class="px-4 py-2 text-left font-black text-amber-800 uppercase text-xs">Correo</th>
-                                        <th class="px-4 py-2 text-center font-black text-amber-800 uppercase text-xs">Decisión</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-amber-100 bg-white" id="tabla-faltantes">
-                                    @foreach(session('advertencia_faltantes') as $faltante)
-                                        <tr class="transition" id="fila-{{ $loop->index }}">
-                                            <td class="px-4 py-3 font-semibold text-gray-800">{{ $faltante['nombre'] }}</td>
-                                            <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $faltante['codigo'] }}</td>
-                                            <td class="px-4 py-3 text-gray-500 text-xs">{{ $faltante['email'] }}</td>
-                                            <td class="px-4 py-3 text-center">
-                                                <input type="hidden" name="decisiones[{{ $faltante['codigo'] }}]" id="decision-{{ $loop->index }}" value="">
-                                                <div class="flex justify-center gap-2">
-                                                    <button type="button" onclick="elegirDecision({{ $loop->index }}, 'mantener', '{{ addslashes($faltante['nombre']) }}')" id="btn-mantener-{{ $loop->index }}"
-                                                            class="btn-decision text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-green-700 bg-white border-green-300 hover:bg-green-100">
-                                                         Mantener
-                                                    </button>
-                                                    <button type="button" onclick="elegirDecision({{ $loop->index }}, 'baja', '{{ addslashes($faltante['nombre']) }}')" id="btn-baja-{{ $loop->index }}"
-                                                            class="btn-decision text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-red-700 bg-white border-red-300 hover:bg-red-100">
-                                                         Dar de baja
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-5 flex justify-end" id="contenedor-proceder" hidden>
-                            <button type="button" onclick="procederCambios()"
-                                    class="bg-[#002d62] text-white px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-[#1e4b8a] transition shadow-lg">
-                                Proceder con los cambios →
-                            </button>
-                        </div>
-                    </form>
+                    <div>
+                        <p class="font-black text-amber-800 text-sm uppercase tracking-wide">
+                             {{ count(session('advertencia_faltantes')) }} alumno(s) del HTM no aparecen en el Excel
+                        </p>
+                        <ul class="mt-2 space-y-0.5">
+                            @foreach(session('advertencia_faltantes') as $f)
+                                <li class="text-xs text-amber-700">• {{ $f['nombre'] }} <span class="font-mono text-amber-500">({{ $f['codigo'] }})</span></li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
 
             {{-- ALUMNOS SIN MATRÍCULA --}}
             @if(session('sin_matricula_list') && count(session('sin_matricula_list')) > 0)
-                <div class="mb-6 bg-blue-50 border-2 border-blue-400 rounded-2xl p-6" id="bloque-sin-matricula">
-                    <div class="flex items-start gap-4 mb-4">
-                        <div class="bg-blue-500 p-2 rounded-xl flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="font-black text-blue-800 text-base uppercase tracking-wide">
-                                {{ count(session('sin_matricula_list')) }} alumno(s) sin matrícula vinculada
-                            </h3>
-                            <p class="text-blue-700 text-sm mt-1">
-                                Elige una acción para cada alumno y luego presiona <strong>"Proceder con los cambios"</strong>.
-                            </p>
-                        </div>
+                <div class="mb-6 bg-blue-50 border-2 border-blue-400 rounded-2xl p-4 flex items-start gap-3">
+                    <div class="bg-blue-500 p-2 rounded-xl flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/>
+                        </svg>
                     </div>
-                    <form action="{{ route('profesor.actas.procesar_matriculas', $materia->nrc) }}" method="POST" id="form-matriculas">
-                        @csrf
-                        <div class="overflow-x-auto rounded-xl border border-blue-200">
-                            <table class="w-full text-sm">
-                                <thead class="bg-blue-100">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left font-black text-blue-800 uppercase text-xs">Nombre</th>
-                                        <th class="px-4 py-2 text-left font-black text-blue-800 uppercase text-xs">Correo</th>
-                                        <th class="px-4 py-2 text-center font-black text-blue-800 uppercase text-xs">Decisión</th>
-                                        <th class="px-4 py-2 text-center font-black text-blue-800 uppercase text-xs">Matrícula</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-blue-100 bg-white" id="tabla-matriculas">
-                                    @foreach(session('sin_matricula_list') as $alumno)
-                                        <tr class="transition" id="fila-mat-{{ $loop->index }}">
-                                            <td class="px-4 py-3 font-semibold text-gray-800">{{ $alumno['nombre'] }}</td>
-                                            <td class="px-4 py-3 text-gray-500 text-xs">{{ $alumno['email'] }}</td>
-                                            <td class="px-4 py-3 text-center">
-                                                <input type="hidden" name="decisiones[{{ $alumno['email'] }}][accion]" id="accion-mat-{{ $loop->index }}" value="">
-                                                <input type="hidden" name="decisiones[{{ $alumno['email'] }}][email]" value="{{ $alumno['email'] }}">
-                                                <div class="flex justify-center gap-2">
-                                                    <button type="button" onclick="elegirDecisionMatricula({{ $loop->index }}, 'asignar', '{{ addslashes($alumno['nombre']) }}')" id="btn-asignar-{{ $loop->index }}"
-                                                            class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-blue-700 bg-white border-blue-300 hover:bg-blue-100">
-                                                         Asignar matrícula
-                                                    </button>
-                                                    <button type="button" onclick="elegirDecisionMatricula({{ $loop->index }}, 'ignorar', '{{ addslashes($alumno['nombre']) }}')" id="btn-ignorar-{{ $loop->index }}"
-                                                            class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-gray-500 bg-white border-gray-300 hover:bg-gray-100">
-                                                         Ignorar
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <td class="px-4 py-3 text-center">
-                                                <input type="text" name="decisiones[{{ $alumno['email'] }}][codigo]" id="input-mat-{{ $loop->index }}"
-                                                       placeholder="000000000" maxlength="9" disabled
-                                                       class="w-32 text-center rounded-lg border-gray-300 text-sm font-mono focus:ring-blue-400 disabled:bg-gray-100 disabled:text-gray-400 transition">
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-5 flex justify-end" id="contenedor-proceder-matriculas" hidden>
-                            <button type="button" onclick="procederMatriculas()"
-                                    class="bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition shadow-lg">
-                                Proceder con los cambios →
-                            </button>
-                        </div>
-                    </form>
+                    <div>
+                        <p class="font-black text-blue-800 text-sm uppercase tracking-wide">
+                            {{ count(session('sin_matricula_list')) }} alumno(s) sin matrícula vinculada en el sistema
+                        </p>
+                        <ul class="mt-2 space-y-0.5">
+                            @foreach(session('sin_matricula_list') as $a)
+                                <li class="text-xs text-blue-700">• {{ $a['nombre'] }} <span class="font-mono text-blue-400">{{ $a['email'] }}</span></li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
 
-            {{-- SECCIÓN CARGA DE ARCHIVOS (versión compañero: Tareas y Prácticas) --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="bg-white p-6 rounded-3xl shadow-sm border-2 border-dashed border-blue-200 hover:border-blue-400 transition-colors">
-                    <div class="flex items-center mb-4">
-                        <div class="p-3 bg-blue-50 rounded-2xl mr-4">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+            {{-- OPCIÓN C+D: Alumnos del HTM sin calificación en esta actividad --}}
+            @if(session('htm_sin_calificacion'))
+                <div class="mb-6 bg-orange-50 border-2 border-orange-400 rounded-2xl p-5" id="bloque-htm-sin-cal">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="bg-orange-400 p-2 rounded-xl flex-shrink-0">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            </svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-black text-gray-800 uppercase">Cargar Tareas</h3>
-                            <p class="text-[10px] text-gray-500">Asigna automáticamente como TAREA</p>
+                            <p class="font-black text-orange-800 text-sm uppercase tracking-wide">
+                                {{ count(session('htm_sin_calificacion')) }} alumno(s) del HTM sin calificación en "{{ session('actividad_cargada') }}"
+                            </p>
+                            <p class="text-orange-700 text-xs mt-1">¿Deseas asignarles 0 automáticamente? Podrás modificarlo después.</p>
                         </div>
                     </div>
-                    <form action="{{ route('profesor.actas.importar', $materia->nrc) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
-                        @csrf <input type="hidden" name="tipo" value="tarea">
-                        <input type="file" name="archivo" accept=".xlsx, .xls" required class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <button type="submit" class="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700 shadow-md">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        </button>
-                    </form>
+                    <div class="mb-3 overflow-x-auto rounded-xl border border-orange-200">
+                        <table class="w-full text-xs">
+                            <thead class="bg-orange-100">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-black text-orange-800 uppercase">Nombre</th>
+                                    <th class="px-3 py-2 text-left font-black text-orange-800 uppercase">Matrícula</th>
+                                    <th class="px-3 py-2 text-left font-black text-orange-800 uppercase">Correo</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-orange-100 bg-white">
+                                @foreach(session('htm_sin_calificacion') as $a)
+                                    <tr><td class="px-3 py-2 font-semibold">{{ $a['nombre'] }}</td><td class="px-3 py-2 font-mono">{{ $a['codigo'] }}</td><td class="px-3 py-2 text-gray-500">{{ $a['email'] }}</td></tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex gap-3">
+                        <form action="{{ route('profesor.actas.asignar_cero', $materia->nrc) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="actividad" value="{{ session('actividad_cargada') }}">
+                            <input type="hidden" name="tipo" value="{{ session('tipo_cargado') }}">
+                            @foreach(session('htm_sin_calificacion') as $a)
+                                <input type="hidden" name="alumnos[]" value="{{ $a['email'] }}">
+                                <input type="hidden" name="nombres[{{ $a['email'] }}]" value="{{ $a['nombre'] }}">
+                            @endforeach
+                            <button type="submit" class="px-5 py-2 bg-orange-500 text-white text-xs font-bold rounded-xl hover:bg-orange-600 transition">
+                                Sí, asignar 0 a todos
+                            </button>
+                        </form>
+                        <a href="{{ route('profesor.actas.index', $materia->nrc) }}"
+                           class="px-5 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 transition">
+                            No, dejarlos sin calificación
+                        </a>
+                    </div>
                 </div>
+            @endif
 
-                <div class="bg-white p-6 rounded-3xl shadow-sm border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition-colors">
-                    <div class="flex items-center mb-4">
-                        <div class="p-3 bg-indigo-50 rounded-2xl mr-4">
-                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.251a2 2 0 01-1.285 0l-.628-.251a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547l-.34.34a2 2 0 000 2.829l1.245 1.245a2 2 0 002.829 0l.143-.143a2 2 0 011.285 0l.143.143a2 2 0 002.829 0l1.245-1.245a2 2 0 000-2.829l-.34-.34z"></path></svg>
-                        </div>
+            {{-- SECCIÓN CARGA DE ARCHIVOS --}}
+            <div class="bg-white p-6 rounded-3xl shadow-sm border-2 border-dashed border-blue-200 hover:border-blue-400 transition-colors mb-6">
+                <h3 class="text-sm font-black text-gray-800 uppercase mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Cargar actividad
+                </h3>
+                <form action="{{ route('profesor.actas.importar', $materia->nrc) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+
+                        {{-- Selector de tipo --}}
                         <div>
-                            <h3 class="text-sm font-black text-gray-800 uppercase">Cargar Prácticas</h3>
-                            <p class="text-[10px] text-gray-500">Asigna automáticamente como PRÁCTICA</p>
+                            <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Tipo de actividad</label>
+                            <select name="tipo" required
+                                    class="w-full rounded-xl border-gray-300 font-semibold text-gray-700 text-sm focus:ring-[#1e4b8a]"
+                                    onchange="mostrarRecuperacion(this.value)">
+                                <option value="">-- Selecciona el tipo --</option>
+                                <option value="tarea"> Tarea</option>
+                                <option value="practica"> Práctica</option>
+                                <option value="examen"> Examen</option>
+                                <option value="recuperacion"> Recuperación</option>
+                                <option value="proyecto"> Proyecto</option>
+                            </select>
+                        </div>
+
+                        {{-- Campo: qué examen recupera (solo visible si tipo=recuperacion) --}}
+                        <div id="campo-examen-recupera" style="display:none">
+                            <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">¿Qué examen recupera?</label>
+                            <select name="examen_recupera"
+                                    class="w-full rounded-xl border-gray-300 font-semibold text-gray-700 text-sm focus:ring-[#1e4b8a]">
+                                <option value="">-- Selecciona el examen --</option>
+                                @foreach(($actividades ?? collect())->filter(fn($a) => ($tipos[$a] ?? '') === 'examen') as $examAct)
+                                    <option value="{{ $examAct }}">{{ $examAct }}</option>
+                                @endforeach
+                                @if(($actividades ?? collect())->filter(fn($a) => ($tipos[$a] ?? '') === 'examen')->isEmpty())
+                                    <option value="_sin_examen" disabled>No hay exámenes cargados aún</option>
+                                @endif
+                            </select>
+                            <p class="text-xs text-gray-400 mt-1 italic">Solo se aplica si el alumno reprobó ese examen (&lt;6).</p>
+                        </div>
+
+                        {{-- Selector de archivo --}}
+                        <div>
+                            <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Archivo Excel de Teams</label>
+                            <input type="file" name="archivo" accept=".xlsx,.xls" required
+                                   class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+
+                        {{-- Botón subir --}}
+                        <div>
+                            <button type="submit" id="btn-cargar-actividad"
+                                    class="w-full bg-[#002d62] text-white py-2.5 px-6 rounded-xl font-black text-sm hover:bg-[#1e4b8a] transition shadow-md flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                Cargar actividad
+                            </button>
                         </div>
                     </div>
-                    <form action="{{ route('profesor.actas.importar', $materia->nrc) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
-                        @csrf <input type="hidden" name="tipo" value="practica">
-                        <input type="file" name="archivo" accept=".xlsx, .xls" required class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <button type="submit" class="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 shadow-md">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        </button>
-                    </form>
-                </div>
+                </form>
             </div>
 
             {{-- SECCIÓN PESOS --}}
@@ -275,18 +255,13 @@
                                     </th>
                                 @endforeach
 
-                                <th class="px-2 py-4 font-bold uppercase text-[11px] text-center bg-orange-600 border-l border-orange-500">Proyecto</th>
-                                <th class="px-2 py-4 font-bold uppercase text-[11px] text-center bg-blue-800 border-l border-blue-700">U1</th>
-                                <th class="px-2 py-4 font-bold uppercase text-[11px] text-center bg-blue-800 border-l border-blue-700">U2-U3</th>
-                                <th class="px-2 py-4 font-bold uppercase text-[11px] text-center bg-red-700 border-l border-red-600">Recup</th>
                                 <th class="px-4 py-4 font-bold uppercase text-[11px] text-center bg-gray-900 sticky right-0 z-10">Final</th>
                             </tr>
                         </thead>
 
                         <tbody class="divide-y divide-gray-200">
                             @forelse($alumnos ?? [] as $correo => $datos)
-                                <tr class="alumno-fila hover:bg-blue-50/50 transition cursor-pointer"
-                                    @click="enfocarAlumno({{ json_encode($datos) }}, '{{ $correo }}')">
+                                <tr class="alumno-fila hover:bg-blue-50/50 transition">
                                     <td class="px-4 py-3 sticky-column bg-white border-r">
                                         <div class="font-bold text-gray-900 text-xs uppercase nombre-alumno">{{ $datos['nombre'] }}</div>
                                         <div class="text-[10px] text-blue-600 font-medium">{{ $correo }}</div>
@@ -297,23 +272,20 @@
 
                                     @foreach($actividades ?? [] as $actividad)
                                         @php $tipo = $tipos[$actividad] ?? 'tarea'; @endphp
-                                        <td class="px-2 py-4 text-center text-sm font-bold text-gray-700 border-l border-gray-100 {{ $tipo === 'practica' ? 'nota-practica bg-indigo-50/30' : 'nota-tarea bg-blue-50/20' }}">
-                                            {{ $datos['notas'][$actividad] ?? 0 }}
+                                        <td class="px-2 py-2 text-center border-l border-gray-100 {{ $tipo === 'practica' ? 'nota-practica bg-indigo-50/30' : 'nota-tarea bg-blue-50/20' }}"
+                                            data-tipo="{{ $tipo }}">
+                                            <input type="number" step="0.1"
+                                                   class="input-calif nota-act"
+                                                   value="{{ $datos['notas'][$actividad] ?? 0 }}"
+                                                   data-email="{{ $correo }}"
+                                                   data-campo="nota_actividad"
+                                                   data-actividad="{{ $actividad }}"
+                                                   data-tipo="{{ $tipo }}"
+                                                   onblur="guardarNota(this)"
+                                                   @input.stop="recalcularTodo()">
                                         </td>
                                     @endforeach
 
-                                    <td class="px-2 py-2 text-center bg-orange-50/30">
-                                        <input type="number" step="0.1" class="input-calif input-proy" value="{{ $datos['manual']->proyecto ?? 0 }}" data-email="{{ $correo }}" data-campo="proyecto" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
-                                    </td>
-                                    <td class="px-2 py-2 text-center bg-blue-50/30">
-                                        <input type="number" step="0.1" class="input-calif input-u1" value="{{ $datos['manual']->examen_u1 ?? 0 }}" data-email="{{ $correo }}" data-campo="examen_u1" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
-                                    </td>
-                                    <td class="px-2 py-2 text-center bg-blue-50/30 border-l border-blue-100">
-                                        <input type="number" step="0.1" class="input-calif input-u2" value="{{ $datos['manual']->examen_u2_u3 ?? 0 }}" data-email="{{ $correo }}" data-campo="examen_u2_u3" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
-                                    </td>
-                                    <td class="px-2 py-2 text-center bg-red-50/30 border-l border-red-100">
-                                        <input type="number" step="0.1" class="input-calif input-recup" value="{{ $datos['manual']->recuperacion_u1 ?? '' }}" placeholder="-" data-email="{{ $correo }}" data-campo="recuperacion_u1" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
-                                    </td>
                                     <td class="px-4 py-2 text-center bg-gray-50 font-black text-lg sticky right-0 shadow-sm border-l">
                                         <span class="final-span">0</span>
                                     </td>
@@ -350,40 +322,6 @@
             </div>
         </div>
 
-        {{-- MODAL ENFOQUE ALUMNO --}}
-        <div x-show="alumnoEnfocado" x-cloak class="focus-overlay" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);">
-            <div @click.away="alumnoEnfocado = null" class="cloned-row-container">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-black text-[#002d62]" x-text="alumnoEnfocado?.nombre ?? ''"></h3>
-                    <button @click="alumnoEnfocado = null" class="text-gray-400 hover:text-gray-600 font-black text-xl">✕</button>
-                </div>
-                <table class="cloned-table">
-                    <thead>
-                        <tr>
-                            <th>Part</th>
-                            @foreach($actividades ?? [] as $act)
-                                <th>{{ $act }}</th>
-                            @endforeach
-                            <th>Proyecto</th><th>U1</th><th>U2-U3</th><th>Recup</th><th>Final</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td x-text="getValorEnfocado('participacion')"></td>
-                            @foreach($actividades ?? [] as $act)
-                                <td x-text="getNotaEnfocada('{{ $act }}')"></td>
-                            @endforeach
-                            <td x-text="getValorEnfocado('proyecto')"></td>
-                            <td x-text="getValorEnfocado('examen_u1')"></td>
-                            <td x-text="getValorEnfocado('examen_u2_u3')"></td>
-                            <td x-text="getValorEnfocado('recuperacion_u1') || '-'"></td>
-                            <td x-text="getFinalEnfocado()"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         {{-- MODAL ELIMINAR ACTIVIDAD --}}
         <div x-data="{ showModal: false, itemEliminar: '', formAction: '' }"
              @abrir-modal-eliminar.window="showModal = true; itemEliminar = $event.detail.nombre; formAction = $event.detail.action"
@@ -409,6 +347,21 @@
     </div>
 
     <script>
+        function guardarNota(input) {
+            const email     = input.getAttribute('data-email');
+            const actividad = input.getAttribute('data-actividad');
+            const valor     = input.value;
+            const nombre    = input.closest('tr').querySelector('.nombre-alumno').innerText;
+
+            fetch("{{ route('profesor.actas.guardar_nota', ['nrc' => $materia->nrc]) }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({ email, actividad, valor, nombre })
+            }).then(r => r.json()).then(d => {
+                if (d.status !== 'success') console.error('Error guardando nota');
+            });
+        }
+
         function guardarDatoManual(input) {
             fetch("{{ route('profesor.actas.guardar_manual', ['nrc' => $materia->nrc]) }}", {
                 method: 'POST',
@@ -517,35 +470,8 @@
 
         function actaApp() {
             return {
-                alumnoEnfocado: null,
-                correoEnfocado: '',
                 actividades: @js($actividades),
                 tipos: @js($tipos),
-
-                enfocarAlumno(datos, correo) {
-                    this.alumnoEnfocado = datos;
-                    this.correoEnfocado = correo;
-                },
-
-                getValorEnfocado(campo) {
-                    if (!this.correoEnfocado) return 0;
-                    const input = document.querySelector(`.alumno-fila [data-email="${this.correoEnfocado}"][data-campo="${campo}"]`);
-                    if (!input) return this.alumnoEnfocado?.manual?.[campo] ?? 0;
-                    const val = input.value.trim();
-                    return val !== '' ? val : 0;
-                },
-
-                getNotaEnfocada(act) {
-                    if (!this.alumnoEnfocado) return 0;
-                    return this.alumnoEnfocado.notas?.[act] ?? 0;
-                },
-
-                getFinalEnfocado() {
-                    if (!this.correoEnfocado) return 0;
-                    const input = document.querySelector(`.alumno-fila [data-email="${this.correoEnfocado}"][data-campo="participacion"]`);
-                    if (!input) return 0;
-                    return input.closest('tr')?.querySelector('.final-span')?.innerText ?? 0;
-                },
 
                 recalcularTodo() {
                     const getW = (id) => (parseFloat(document.getElementById(id)?.value) || 0) / 100;
@@ -556,21 +482,25 @@
                     const wExam   = getW('w_exam');
 
                     document.querySelectorAll('.alumno-fila').forEach(fila => {
-                        const part = parseFloat(fila.querySelector('.input-part').value)  || 0;
-                        const proy = parseFloat(fila.querySelector('.input-proy').value)  || 0;
-                        const u2u3 = parseFloat(fila.querySelector('.input-u2').value)    || 0;
-                        const valRec = fila.querySelector('.input-recup').value.trim();
-                        const u1 = (valRec !== '') ? parseFloat(valRec) : (parseFloat(fila.querySelector('.input-u1').value) || 0);
+                        const part = parseFloat(fila.querySelector('.input-part')?.value) || 0;
 
-                        let sumaT = 0, contT = 0;
-                        fila.querySelectorAll('.nota-tarea').forEach(td => { sumaT += parseFloat(td.innerText) || 0; contT++; });
-                        const pT = contT > 0 ? (sumaT / contT) : 0;
+                        // Calcular por tipo de actividad
+                        const tipoSumas = {};
+                        const tipoCont  = {};
+                        fila.querySelectorAll('[data-tipo]').forEach(td => {
+                            const tipo = td.dataset.tipo;
+                            const nota = parseFloat(td.innerText) || 0;
+                            tipoSumas[tipo] = (tipoSumas[tipo] || 0) + nota;
+                            tipoCont[tipo]  = (tipoCont[tipo]  || 0) + 1;
+                        });
 
-                        let sumaP = 0, contP = 0;
-                        fila.querySelectorAll('.nota-practica').forEach(td => { sumaP += parseFloat(td.innerText) || 0; contP++; });
-                        const pP = contP > 0 ? (sumaP / contP) : 0;
+                        let final = part * wPart;
+                        for (const tipo in tipoSumas) {
+                            const prom = tipoSumas[tipo] / tipoCont[tipo];
+                            const wMap = { tarea: wTareas, practica: wPrac, proyecto: wProy, examen: wExam, recuperacion: wExam };
+                            final += prom * (wMap[tipo] || 0);
+                        }
 
-                        let final = (part * wPart) + (pT * wTareas) + (pP * wPrac) + (proy * wProy) + (((u1 + u2u3) / 2) * wExam);
                         final = Math.round(final * 100) / 100;
                         let red = (final >= 5.5 && final < 6.0) ? 5 : Math.round(final);
 

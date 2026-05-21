@@ -81,46 +81,71 @@
 
         {{-- Aviso de alumnos faltantes en el nuevo HTM --}}
         @if(session('faltantes') && count(session('faltantes')) > 0)
-            <div class="mb-4 p-5 bg-orange-50 border-2 border-orange-400 text-orange-900 rounded-xl">
-                <div class="flex items-start gap-3 mb-3">
-
+            <div class="mb-4 bg-orange-50 border-2 border-orange-400 rounded-2xl p-6" id="bloque-faltantes-htm">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="bg-orange-400 p-2 rounded-xl flex-shrink-0">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                    </div>
                     <div>
-                        <p class="font-black text-base">Alumnos que ya no aparecen en la lista oficial</p>
+                        <p class="font-black text-base text-orange-900 uppercase tracking-wide">
+                            {{ count(session('faltantes')) }} alumno(s) ya no aparecen en la lista oficial
+                        </p>
                         <p class="text-sm mt-1 text-orange-700">
-                            Los siguientes {{ count(session('faltantes')) }} alumno(s) estaban registrados en esta materia
-                            pero <strong>no aparecen</strong> en la nueva lista que acabas de subir.
-                            ¿Deseas darlos de baja de la materia?
+                            Elige una acción para cada alumno y luego presiona <strong>"Proceder con los cambios"</strong>.
                         </p>
                     </div>
                 </div>
 
-                <ul class="mb-4 space-y-1 text-sm list-disc list-inside ml-8">
-                    @foreach(session('faltantes') as $f)
-                        <li>{{ $f['nombre'] }} <span class="text-orange-500 font-mono text-xs">({{ $f['codigo'] }})</span></li>
-                    @endforeach
-                </ul>
+                <form method="POST" action="{{ route('profesor.estudiantes.baja.faltantes') }}" id="form-faltantes-htm">
+                    @csrf
+                    <input type="hidden" name="nrc" value="{{ session('nrc_import') }}">
 
-                <div class="flex gap-3 ml-8">
-                    {{-- Sí, dar de baja -- }}
-                    <form method="POST" action="{{ route('profesor.estudiantes.baja.faltantes') }}">
-                        @csrf
-                        <input type="hidden" name="nrc" value="{{ session('nrc_import') }}">
-                        @foreach(session('faltantes') as $f)
-                            <input type="hidden" name="ids[]" value="{{ $f['id'] }}">
-                        @endforeach
-                        <button type="submit"
-                            onclick="return confirm('¿Confirmas dar de baja a {{ count(session('faltantes')) }} alumno(s)?')"
-                            class="px-5 py-2 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition">
-                            Sí, dar de baja
+                    <div class="overflow-x-auto rounded-xl border border-orange-200">
+                        <table class="w-full text-sm">
+                            <thead class="bg-orange-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-black text-orange-800 uppercase text-xs">Nombre</th>
+                                    <th class="px-4 py-2 text-left font-black text-orange-800 uppercase text-xs">Matrícula</th>
+                                    <th class="px-4 py-2 text-center font-black text-orange-800 uppercase text-xs">Decisión</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-orange-100 bg-white">
+                                @foreach(session('faltantes') as $f)
+                                    <tr class="transition" id="fila-htm-{{ $loop->index }}">
+                                        <td class="px-4 py-3 font-semibold text-gray-800">{{ $f['nombre'] }}</td>
+                                        <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $f['codigo'] }}</td>
+                                        <td class="px-4 py-3 text-center">
+                                            <input type="hidden" name="decisiones[{{ $f['codigo'] }}]" id="decision-htm-{{ $loop->index }}" value="">
+                                            <div class="flex justify-center gap-2">
+                                                <button type="button"
+                                                        onclick="elegirDecisionHtm({{ $loop->index }}, 'mantener')"
+                                                        id="btn-mantener-htm-{{ $loop->index }}"
+                                                        class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-green-700 bg-white border-green-300 hover:bg-green-100">
+                                                     Mantener
+                                                </button>
+                                                <button type="button"
+                                                        onclick="elegirDecisionHtm({{ $loop->index }}, 'baja')"
+                                                        id="btn-baja-htm-{{ $loop->index }}"
+                                                        class="text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-red-700 bg-white border-red-300 hover:bg-red-100">
+                                                     Dar de baja
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-5 flex justify-end" id="contenedor-proceder-htm" hidden>
+                        <button type="button" onclick="procederCambiosHtm()"
+                                class="bg-[#002d62] text-white px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-[#1e4b8a] transition shadow-lg">
+                            Proceder con los cambios →
                         </button>
-                    </form>
-
-                    {{-- No, mantener --}}
-                    <a href="{{ route('profesor.estudiantes.index', ['nrc' => session('nrc_import')]) }}"
-                       class="px-5 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition">
-                        No, mantenerlos
-                    </a>
-                </div>
+                    </div>
+                </form>
             </div>
         @endif
 
@@ -211,4 +236,44 @@
             @endif
         </div>
     </div>
+
+    <script>
+        const totalFaltantesHtm = document.querySelectorAll('[id^="decision-htm-"]').length;
+        let decisionesHtm = {};
+
+        function elegirDecisionHtm(index, tipo) {
+            decisionesHtm[index] = tipo;
+
+            const btnMantener = document.getElementById('btn-mantener-htm-' + index);
+            const btnBaja     = document.getElementById('btn-baja-htm-' + index);
+            const input       = document.getElementById('decision-htm-' + index);
+            const fila        = document.getElementById('fila-htm-' + index);
+
+            btnMantener.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-green-700 bg-white border-green-300 hover:bg-green-100';
+            btnBaja.className     = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-red-700 bg-white border-red-300 hover:bg-red-100';
+            fila.classList.remove('bg-green-50', 'bg-red-50');
+
+            if (tipo === 'mantener') {
+                btnMantener.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-green-800 bg-green-200 border-green-400 ring-2 ring-green-400';
+                fila.classList.add('bg-green-50');
+                input.value = 'mantener';
+            } else {
+                btnBaja.className = 'text-xs px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-red-800 bg-red-200 border-red-400 ring-2 ring-red-400';
+                fila.classList.add('bg-red-50');
+                input.value = 'baja';
+            }
+
+            if (Object.keys(decisionesHtm).length === totalFaltantesHtm) {
+                document.getElementById('contenedor-proceder-htm').removeAttribute('hidden');
+            }
+        }
+
+        function procederCambiosHtm() {
+            const bajas    = Object.values(decisionesHtm).filter(d => d === 'baja').length;
+            const mantener = Object.values(decisionesHtm).filter(d => d === 'mantener').length;
+            if (confirm('¿Confirmas los siguientes cambios?\n\n Mantener: ' + mantener + ' alumno(s)\n Dar de baja: ' + bajas + ' alumno(s)\n\nEsta acción no se puede deshacer.')) {
+                document.getElementById('form-faltantes-htm').submit();
+            }
+        }
+    </script>
 </x-app-layout>

@@ -236,6 +236,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // PDF lista de acceso
         Route::get('/actas/{nrc}/lista-acceso', [ActasController::class, 'descargarListaAcceso'])->name('profesor.actas.lista_acceso');
 
+        // Guardar nota individual de actividad
+        Route::post('/actas/{nrc}/guardar-nota', [ActasController::class, 'guardarNota'])->name('profesor.actas.guardar_nota');
+
+        // Asignar cero a alumnos HTM sin calificación
+        Route::post('/actas/{nrc}/asignar-cero', [ActasController::class, 'asignarCero'])->name('profesor.actas.asignar_cero');
+
         // Matricula en actas
         Route::post('/actas/{nrc}/procesar-matriculas', [ActasController::class, 'procesarMatriculas'])->name('profesor.actas.procesar_matriculas');
 

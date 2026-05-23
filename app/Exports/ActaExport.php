@@ -27,6 +27,7 @@ class ActaExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $this->alumnos      = $alumnos;
         $this->actividades  = $actividades;
         $this->materia      = $materia;
+        
         // Normalizar claves a minúsculas y reemplazar nulls por 'tarea'
         $tiposNorm = [];
         foreach ($tipos as $k => $v) {
@@ -76,7 +77,7 @@ class ActaExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $wPart = $this->ponderaciones['participacion'] ?? 10;
 
         return array_merge(
-            ['Nombre del Alumno', 'Correo'],
+            ['MATRÍCULA', 'NOMBRE DEL ALUMNO', 'CORREO'], // ── INCLUIDA LA COLUMNA DE MATRÍCULA
             $actHeaders,
             [
                 "PARTICIPACIÓN ({$wPart}%)",
@@ -88,7 +89,12 @@ class ActaExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function map($alumno): array
     {
-        $mapeo = [$alumno['nombre'], $alumno['email']];
+        // ── MAPEO DE LA MATRÍCULA REAL COMO PRIMER ELEMENTO DE LA FILA ──
+        $mapeo = [
+            $alumno['matricula'], 
+            mb_strtoupper($alumno['nombre']), // En mayúsculas para homologar con el acta oficial
+            $alumno['email']
+        ];
 
         foreach ($this->actividades as $act) {
             $mapeo[] = $alumno['notas_teams'][$act] ?? 0;
@@ -151,7 +157,8 @@ class ActaExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
                 $sheet->getRowDimension(1)->setRowHeight(35);
 
-                $sheet->getStyle('C1:' . $highestCol . $highestRow)
+                // Como agregamos una columna al inicio, centramos desde la columna D (notas) en adelante
+                $sheet->getStyle('D1:' . $highestCol . $highestRow)
                       ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
                       ->setVertical(Alignment::VERTICAL_CENTER);
 

@@ -20,6 +20,19 @@
         .cloned-table { width: 100%; border-collapse: collapse; }
         .cloned-table th { background: #002d62; color: white; padding: 12px; font-size: 10px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); }
         .cloned-table td { padding: 15px; text-align: center; font-weight: bold; border: 1px solid #e5e7eb; font-size: 14px; }
+
+        /* FIX 3: Color reactivo por tipo de actividad */
+        .col-tipo-tarea      { background-color: rgba(219, 234, 254, 0.2); }
+        .col-tipo-practica   { background-color: rgba(238, 242, 255, 0.3); }
+        .col-tipo-examen     { background-color: rgba(254, 243, 199, 0.3); }
+        .col-tipo-proyecto   { background-color: rgba(209, 250, 229, 0.2); }
+        .col-tipo-recuperacion { background-color: rgba(254, 226, 226, 0.2); }
+
+        .th-tipo-tarea      { /* hereda bg de la clase base */ }
+        .th-tipo-practica   { background-color: #3730a3 !important; }
+        .th-tipo-examen     { background-color: #92400e !important; }
+        .th-tipo-proyecto   { background-color: #065f46 !important; }
+        .th-tipo-recuperacion { background-color: #991b1b !important; }
     </style>
 
     <div class="py-8 bg-gray-50 min-h-screen" x-data="actaApp()" x-init="recalcularTodo()">
@@ -231,26 +244,71 @@
 
                                 @foreach($actividades ?? [] as $actividad)
                                     @php $tipo = $tipos[$actividad] ?? 'tarea'; @endphp
-                                    <th class="th-teams px-3 py-4 font-bold uppercase text-[10px] text-center border-l border-blue-800/30 relative {{ $tipo === 'practica' ? 'bg-indigo-800' : '' }}"
+
+                                    {{--
+                                        FIX 2: Dropdown Alpine.js en el <th> para cambiar el tipo de actividad
+                                        en tiempo real. Al seleccionar un tipo nuevo se llama cambiarTipoActividad()
+                                        que actualiza el estado reactivo y dispara recalcularTodo().
+                                    --}}
+                                    <th class="th-teams px-3 py-4 font-bold uppercase text-[10px] text-center border-l border-blue-800/30 relative th-tipo-{{ $tipo }}"
+                                        id="th-act-{{ Str::slug($actividad) }}"
                                         style="overflow: visible !important;"
-                                        x-data="{ open: false }">
+                                        x-data="{
+                                            open: false,
+                                            tipoActual: '{{ $tipo }}',
+                                            nombreActividad: '{{ addslashes($actividad) }}'
+                                        }">
                                         <div class="flex flex-col items-center cursor-pointer group" @click="open = !open">
                                             <span class="group-hover:text-yellow-400 transition-colors">{{ $actividad }}</span>
-                                            <span class="text-[8px] opacity-60 mt-0.5">{{ $tipo === 'practica' ? 'PRÁCTICA' : 'TAREA' }}</span>
+
+                                            {{-- FIX 2: Etiqueta de tipo reactiva vía Alpine --}}
+                                            <span class="text-[8px] opacity-60 mt-0.5 uppercase"
+                                                  x-text="tipoActual === 'practica' ? 'PRÁCTICA'
+                                                        : tipoActual === 'examen'    ? 'EXAMEN'
+                                                        : tipoActual === 'proyecto'  ? 'PROYECTO'
+                                                        : tipoActual === 'recuperacion' ? 'RECUP.'
+                                                        : 'TAREA'">
+                                            </span>
+
                                             <svg class="w-3 h-3 mt-1 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </div>
+
                                         <div x-show="open" @click.away="open = false" x-cloak
-                                             class="absolute left-0 mt-2 w-48 bg-white shadow-2xl rounded-lg py-2 border border-gray-200 text-gray-800"
+                                             class="absolute left-0 mt-2 w-52 bg-white shadow-2xl rounded-lg py-2 border border-gray-200 text-gray-800"
                                              style="z-index: 9999; top: 100%;">
-                                            <div class="px-4 py-1 border-b border-gray-100 text-[9px] text-gray-400 uppercase font-black">Opciones</div>
-                                            <button type="button"
-                                                    @click="$dispatch('abrir-modal-eliminar', { nombre: '{{ $actividad }}', action: '{{ route('profesor.actas.eliminarActividad', [$materia->nrc, $actividad]) }}' })"
-                                                    class="flex items-center w-full px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-bold transition">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                Eliminar columna
-                                            </button>
+                                            <div class="px-4 py-1 border-b border-gray-100 text-[9px] text-gray-400 uppercase font-black">Cambiar tipo</div>
+
+                                            {{-- FIX 2: Opciones para cambiar el tipo de actividad dinámicamente --}}
+                                            <template x-for="opcion in [
+                                                { valor: 'tarea',       label: ' Tarea' },
+                                                { valor: 'practica',    label: ' Práctica' },
+                                                { valor: 'examen',      label: ' Examen' },
+                                                { valor: 'proyecto',    label: ' Proyecto' },
+                                                { valor: 'recuperacion',label: ' Recuperación' }
+                                            ]" :key="opcion.valor">
+                                                <button type="button"
+                                                        @click.stop="
+                                                            tipoActual = opcion.valor;
+                                                            open = false;
+                                                            $dispatch('tipo-cambiado', { actividad: nombreActividad, tipo: opcion.valor });
+                                                            $nextTick(() => recalcularTodo())
+                                                        "
+                                                        class="flex items-center w-full px-4 py-2 text-xs hover:bg-blue-50 font-semibold transition"
+                                                        :class="tipoActual === opcion.valor ? 'text-blue-700 bg-blue-50 font-black' : 'text-gray-700'"
+                                                        x-text="opcion.label">
+                                                </button>
+                                            </template>
+
+                                            <div class="border-t border-gray-100 mt-1 pt-1">
+                                                <button type="button"
+                                                        @click="$dispatch('abrir-modal-eliminar', { nombre: '{{ $actividad }}', action: '{{ route('profesor.actas.eliminarActividad', [$materia->nrc, $actividad]) }}' })"
+                                                        class="flex items-center w-full px-4 py-2 text-xs text-red-600 hover:bg-red-50 font-bold transition">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    Eliminar columna
+                                                </button>
+                                            </div>
                                         </div>
                                     </th>
                                 @endforeach
@@ -260,39 +318,68 @@
                         </thead>
 
                         <tbody class="divide-y divide-gray-200">
-                            @forelse($alumnos ?? [] as $correo => $datos)
-                                <tr class="alumno-fila hover:bg-blue-50/50 transition">
-                                    <td class="px-4 py-3 sticky-column bg-white border-r">
-                                        <div class="font-bold text-gray-900 text-xs uppercase nombre-alumno">{{ $datos['nombre'] }}</div>
-                                        <div class="text-[10px] text-blue-600 font-medium">{{ $correo }}</div>
-                                    </td>
-                                    <td class="px-2 py-2 text-center bg-yellow-50/30">
-                                        <input type="number" step="0.1" class="input-calif input-part" value="{{ $datos['manual']->participacion ?? 0 }}" data-email="{{ $correo }}" data-campo="participacion" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
-                                    </td>
-
-                                    @foreach($actividades ?? [] as $actividad)
-                                        @php $tipo = $tipos[$actividad] ?? 'tarea'; @endphp
-                                        <td class="px-2 py-2 text-center border-l border-gray-100 {{ $tipo === 'practica' ? 'nota-practica bg-indigo-50/30' : 'nota-tarea bg-blue-50/20' }}"
-                                            data-tipo="{{ $tipo }}">
-                                            <input type="number" step="0.1"
-                                                   class="input-calif nota-act"
-                                                   value="{{ $datos['notas'][$actividad] ?? 0 }}"
-                                                   data-email="{{ $correo }}"
-                                                   data-campo="nota_actividad"
-                                                   data-actividad="{{ $actividad }}"
-                                                   data-tipo="{{ $tipo }}"
-                                                   onblur="guardarNota(this)"
-                                                   @input.stop="recalcularTodo()">
+                                @forelse($alumnos ?? [] as $correo => $datos)
+                                    <tr class="alumno-fila fila-alumno-enfoque hover:bg-blue-50/50 transition cursor-pointer"
+                                        data-matricula="{{ $datos['matricula'] ?? explode('@', $correo)[0] }}"
+                                        data-nombre="{{ mb_strtoupper($datos['nombre']) }}"
+                                        data-correo="{{ $correo }}"
+                                        data-manual="{{ json_encode([
+                                            'participacion'   => (float)($datos['manual']->participacion ?? 0),
+                                            'proyecto'        => (float)($datos['manual']->proyecto ?? 0),
+                                            'examen_u1'       => (float)($datos['manual']->examen_u1 ?? 0),
+                                            'examen_u2_u3'    => (float)($datos['manual']->examen_u2_u3 ?? 0),
+                                            'recuperacion_u1' => $datos['manual']->recuperacion_u1 ?? null
+                                        ]) }}"
+                                        data-teams="{{ json_encode($datos['notas'] ?? []) }}">
+                                        
+                                        <td class="px-4 py-3 sticky-column bg-white border-r">
+                                            {{-- Añadimos la clase 'nombre-clicable' para dar feedback visual al profesor --}}
+                                            <div class="font-bold text-gray-900 text-xs uppercase nombre-alumno hover:text-blue-700 transition-colors">
+                                                {{ $datos['nombre'] }}
+                                            </div>
+                                            <div class="text-[10px] text-blue-600 font-medium">{{ $correo }}</div>
                                         </td>
-                                    @endforeach
+                                        
+                                        <td class="px-2 py-2 text-center bg-yellow-50/30">
+                                            <input type="number" step="0.1" class="input-calif input-part" value="{{ $datos['manual']->participacion ?? 0 }}" data-email="{{ $correo }}" data-campo="participacion" onblur="guardarDatoManual(this)" @input.stop="recalcularTodo()">
+                                        </td>
 
-                                    <td class="px-4 py-2 text-center bg-gray-50 font-black text-lg sticky right-0 shadow-sm border-l">
-                                        <span class="final-span">0</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="50" class="py-24 text-center text-gray-400 italic">Sin datos aún. Sube un archivo de Teams para comenzar.</td></tr>
-                            @endforelse
+                                        @foreach($actividades ?? [] as $actividad)
+                                            @php $tipo = $tipos[$actividad] ?? 'tarea'; @endphp
+                                            <td class="px-2 py-2 text-center border-l border-gray-100 col-tipo-{{ $tipo }}"
+                                                data-tipo="{{ $tipo }}"
+                                                data-actividad-col="{{ $actividad }}"
+                                                @tipo-cambiado.window="
+                                                    if ($event.detail.actividad === '{{ $actividad }}') {
+                                                        $el.dataset.tipo = $event.detail.tipo;
+                                                        $el.className = $el.className.replace(/col-tipo-\S+/, '');
+                                                        $el.classList.add('px-2', 'py-2', 'text-center', 'border-l', 'border-gray-100', 'col-tipo-' + $event.detail.tipo);
+                                                        $el.querySelector('.nota-act').dataset.tipo = $event.detail.tipo;
+                                                    }
+                                                ">
+                                                <input type="number" step="0.1"
+                                                    class="input-calif nota-act"
+                                                    value="{{ $datos['notas'][$actividad] ?? 0 }}"
+                                                    data-email="{{ $correo }}"
+                                                    data-campo="nota_actividad"
+                                                    data-actividad="{{ $actividad }}"
+                                                    data-tipo="{{ $tipo }}"
+                                                    onblur="guardarNota(this)"
+                                                    @input.stop="recalcularTodo()">
+                                            </td>
+                                        @endforeach
+
+                                        <td class="px-4 py-2 text-center bg-gray-50 font-black text-lg sticky right-0 shadow-sm border-l">
+                                            <span class="final-span">0</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="50" class="py-24 text-center text-gray-400 italic">
+                                            Sin datos aún. Sube un archivo de Teams para comenzar.
+                                        </td>
+                                    </tr>
+                                @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -346,7 +433,52 @@
         </div>
     </div>
 
+    <div id="modal-enfoque" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden border border-gray-100">
+            <div class="bg-[#002d62] text-white p-6 flex justify-between items-start">
+                <div>
+                    <span id="enfoque-matricula" class="text-xs font-mono bg-white/20 px-2 py-0.5 rounded-md font-bold tracking-wider uppercase mb-1 inline-block"></span>
+                    <h3 id="enfoque-nombre" class="text-xl font-black tracking-tight"></h3>
+                    <p id="enfoque-correo" class="text-sm text-gray-300 font-medium"></p>
+                </div>
+                <button id="cerrar-enfoque" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition text-sm font-bold">
+                    ✕ Cerrar
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div>
+                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Evaluaciones de Criterio (Manual)</h4>
+                    <div class="grid grid-cols-2 gap-3" id="enfoque-notas-manuales">
+                        </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Actividades de Microsoft Teams</h4>
+                    <div class="bg-gray-50 rounded-2xl border border-gray-100 p-4 space-y-2.5" id="enfoque-notas-teams">
+                        </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-6 border-t border-gray-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Estado en Acta</p>
+                    <div id="enfoque-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black mt-1"></div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-bold text-gray-400 block">Calificación Final</span>
+                    <span id="enfoque-calificacion-final" class="text-4xl font-black text-[#002d62]"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function mostrarRecuperacion(valor) {
+            const campo = document.getElementById('campo-examen-recupera');
+            if (campo) campo.style.display = valor === 'recuperacion' ? '' : 'none';
+        }
+
         function guardarNota(input) {
             const email     = input.getAttribute('data-email');
             const actividad = input.getAttribute('data-actividad');
@@ -468,10 +600,20 @@
             }
         }
 
+        
         function actaApp() {
             return {
-                actividades: @js($actividades),
-                tipos: @js($tipos),
+                // Mapa mutable tipo-actividad: se actualiza vía evento tipo-cambiado
+                tiposActivos: @js($tipos),
+
+                init() {
+                    // FIX 2: Escuchar cambios de tipo desde los dropdowns Alpine de los <th>
+                    window.addEventListener('tipo-cambiado', (e) => {
+                        const { actividad, tipo } = e.detail;
+                        this.tiposActivos[actividad] = tipo;
+                        this.recalcularTodo();
+                    });
+                },
 
                 recalcularTodo() {
                     const getW = (id) => (parseFloat(document.getElementById(id)?.value) || 0) / 100;
@@ -481,37 +623,171 @@
                     const wProy   = getW('w_proy');
                     const wExam   = getW('w_exam');
 
+                    const wMap = {
+                        tarea:        wTareas,
+                        practica:     wPrac,    
+                        proyecto:     wProy,
+                        examen:       wExam,
+                        recuperacion: wExam   // la recuperación comparte el peso del examen
+                    };
+
                     document.querySelectorAll('.alumno-fila').forEach(fila => {
+                        // Participación
                         const part = parseFloat(fila.querySelector('.input-part')?.value) || 0;
 
-                        // Calcular por tipo de actividad
+                        // Agrupar notas por tipo
                         const tipoSumas = {};
                         const tipoCont  = {};
-                        fila.querySelectorAll('[data-tipo]').forEach(td => {
-                            const tipo = td.dataset.tipo;
-                            const nota = parseFloat(td.innerText) || 0;
+
+                        fila.querySelectorAll('.nota-act').forEach(input => {
+                            // FIX 2+1: Leer el tipo SIEMPRE desde data-tipo del input,
+                            // que se actualiza en el evento @tipo-cambiado del <td>
+                            const tipo = input.getAttribute('data-tipo') || 'tarea';
+                            const nota = parseFloat(input.value) || 0;
                             tipoSumas[tipo] = (tipoSumas[tipo] || 0) + nota;
                             tipoCont[tipo]  = (tipoCont[tipo]  || 0) + 1;
                         });
 
+                        // Calcular calificación final ponderada
                         let final = part * wPart;
+
                         for (const tipo in tipoSumas) {
-                            const prom = tipoSumas[tipo] / tipoCont[tipo];
-                            const wMap = { tarea: wTareas, practica: wPrac, proyecto: wProy, examen: wExam, recuperacion: wExam };
-                            final += prom * (wMap[tipo] || 0);
+                            const prom   = tipoSumas[tipo] / tipoCont[tipo];
+                            const peso   = wMap[tipo] ?? 0;
+                            final += prom * peso;
                         }
 
                         final = Math.round(final * 100) / 100;
-                        let red = (final >= 5.5 && final < 6.0) ? 5 : Math.round(final);
 
+                        // Regla de redondeo: [5.5, 6.0) → 5; resto → redondeo normal
+                        let calFinal;
+                        if (final >= 5.5 && final < 6.0) {
+                            calFinal = 5;
+                        } else {
+                            calFinal = Math.round(final);
+                        }
+
+                        // FIX 3: Actualizar span con color reactivo
                         const span = fila.querySelector('.final-span');
                         if (span) {
-                            span.innerText = red;
-                            span.className = red < 6 ? 'final-span text-red-600' : 'final-span text-blue-900';
+                            span.textContent = calFinal;
+                            span.className = calFinal < 6
+                                ? 'final-span text-red-600'
+                                : 'final-span text-blue-900';
                         }
                     });
                 }
-            }
+            };
         }
+
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const filas = document.querySelectorAll('.alumno-fila');
+
+            // 1. Creamos el contenedor oscuro (Fondo de ventana) dinámicamente si no existe
+            let fondoVentana = document.getElementById('fondo-ventana-enfoque');
+            if (!fondoVentana) {
+                fondoVentana = document.createElement('div');
+                fondoVentana = Object.assign(fondoVentana, {
+                    id: 'fondo-ventana-enfoque',
+                    className: 'fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center p-4 transition-all duration-300'
+                });
+                
+                // Estructura interna: Un contenedor blanco estilizado para alojar la fila flotante
+                fondoVentana.innerHTML = `
+                    <div class="w-full max-w-7xl bg-white rounded-3xl shadow-2xl p-6 border border-gray-100 flex flex-col gap-4 animate-scale-up">
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></span>
+                                <h3 class="text-sm font-black text-slate-700 tracking-wider uppercase">Modo Enfoque: Editor de Alumno</h3>
+                            </div>
+                            <button id="cerrar-ventana-enfoque" class="px-4 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-xl text-xs font-black transition-all">
+                                ✕  CERRAR
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white" id="espacio-fila-flotante"></div>
+                        <p class="text-[11px] text-gray-400 italic text-center">Puedes modificar las calificaciones aquí dentro. Al cerrar, los cambios se mantendrán en la lista general.</p>
+                    </div>
+                `;
+                document.body.appendChild(fondoVentana);
+            }
+
+            const espacioFila = document.getElementById('espacio-fila-flotante');
+            const btnCerrar = document.getElementById('cerrar-ventana-enfoque');
+
+            filas.forEach(fila => {
+                const nombre = fila.querySelector('.nombre-alumno');
+                
+                if (nombre) {
+                    nombre.addEventListener('click', function(e) {
+                        e.stopPropagation();
+
+                        // 2. Construimos una tabla miniatura idéntica para que la fila no pierda sus tamaños ni estilos
+                        const tablaMiniatura = document.createElement('table');
+                        tablaMiniatura.className = "w-full text-left border-collapse";
+                        
+                        // Clonamos la fila original con TODOS sus inputs, valores y eventos vivos
+                        const filaClonada = fila.cloneNode(true);
+                        
+                        // Truco maestro: Al clonar con JavaScript puro, los valores de los inputs a veces no se copian. Los forzamos:
+                        const inputsOriginales = fila.querySelectorAll('input');
+                        const inputsClonados = filaClonada.querySelectorAll('input');
+                        inputsOriginales.forEach((inputOrig, index) => {
+                            inputsClonados[index].value = inputOrig.value;
+                            
+                            // Sincronizamos en tiempo real: lo que escribas en la ventana se escribe en la tabla de abajo
+                            inputsClonados[index].addEventListener('input', function() {
+                                inputOrig.value = this.value;
+                                // Disparamos el recalcular de Alpine/JS que tengas en la vista principal
+                                inputOrig.dispatchEvent(new Event('input', { bubbles: true }));
+                            });
+                            
+                            inputsClonados[index].addEventListener('blur', function() {
+                                inputOrig.value = this.value;
+                                inputOrig.dispatchEvent(new Event('blur', { bubbles: true }));
+                            });
+                        });
+
+                        // Quitamos clases molestas del clon y le damos un fondo limpio
+                        filaClonada.classList.remove('hover:bg-blue-50/50');
+                        filaClonada.classList.add('bg-slate-50/80');
+
+                        // Metemos la fila clonada dentro de nuestra mini tabla ventana
+                        const tbodyMini = document.createElement('tbody');
+                        tbodyMini.appendChild(filaClonada);
+                        tablaMiniatura.appendChild(tbodyMini);
+
+                        // 3. Montamos la fila en el espacio de la ventana y la mostramos
+                        espacioFila.innerHTML = '';
+                        espacioFila.appendChild(tablaMiniatura);
+                        
+                        fondoVentana.classList.remove('hidden');
+                    });
+                }
+            });
+
+            // Función lógica para cerrar la ventana flotante
+            function cerrarEnfoque() {
+                fondoVentana.classList.add('hidden');
+                espacioFila.innerHTML = '';
+                // Forzamos un recalculo general al cerrar por si acaso
+                if (typeof recalcularTodo === 'function') recalcularTodo();
+            }
+
+            if (btnCerrar) btnCerrar.addEventListener('click', cerrarEnfoque);
+            fondoVentana.addEventListener('click', function(e) {
+                if (e.target === fondoVentana) cerrarEnfoque();
+            });
+        });
     </script>
+    <style>
+        /* Animación sutil para que la ventana emerja con estilo */
+        @keyframes scaleUp {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-scale-up {
+            animation: scaleUp 0.2s ease-out forwards;
+        }
+    </style>
 </x-app-layout>
